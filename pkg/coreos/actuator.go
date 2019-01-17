@@ -78,6 +78,7 @@ func (c *operatingSystemConfigActuator) Delete(ctx context.Context, config *exte
 func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
 	cloudConfig, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
 	if err != nil {
+		config.Status.ObservedGeneration = config.Generation
 		config.Status.LastOperation, config.Status.LastError = controller.ReconcileError(extensionsv1alpha1.LastOperationTypeReconcile, fmt.Sprintf("Could not generate cloud config: %v", err), 50)
 		if err := c.client.Status().Update(ctx, config); err != nil {
 			c.logger.Error(err, "Could not update operating system config status after update error", "osc", config.Name)
@@ -95,6 +96,7 @@ func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *e
 	if err := controller.CreateOrUpdate(ctx, c.client, secret, func() error {
 		return controllerutil.SetControllerReference(config, secret, c.scheme)
 	}); err != nil {
+		config.Status.ObservedGeneration = config.Generation
 		config.Status.LastOperation, config.Status.LastError = controller.ReconcileError(extensionsv1alpha1.LastOperationTypeReconcile, fmt.Sprintf("Could not apply secret for generated cloud config: %v", err), 50)
 		if err := c.client.Status().Update(ctx, config); err != nil {
 			c.logger.Error(err, "Could not update operating system config status after reconcile error", "osc", config.Name)
@@ -108,11 +110,13 @@ func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *e
 			Namespace: secret.Namespace,
 		},
 	}
+	config.Status.ObservedGeneration = config.Generation
 	config.Status.LastOperation, config.Status.LastError = controller.ReconcileSucceeded(extensionsv1alpha1.LastOperationTypeReconcile, "Successfully generated cloud config")
 	return c.client.Status().Update(ctx, config)
 }
 
 func (c *operatingSystemConfigActuator) delete(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
+	config.Status.ObservedGeneration = config.Generation
 	config.Status.LastOperation, config.Status.LastError = controller.ReconcileSucceeded(extensionsv1alpha1.LastOperationTypeDelete, "Successfully deleted cloud config")
 	if err := c.client.Status().Update(ctx, config); err != nil {
 		c.logger.Error(err, "Could not update operating system config status for deletion", "osc", config.Name)
