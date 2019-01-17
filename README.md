@@ -35,6 +35,11 @@ status:
     secretRef:
       name: osc-result-pool-01-original
       namespace: default
+  command: /usr/bin/coreos-cloudinit -from-file=<path>
+  units:
+  - docker-monitor.service
+  - kubelet-monitor.service
+  - kubelet.service
 ```
 
 The secret has one data key `cloud_config` that stores the generation.

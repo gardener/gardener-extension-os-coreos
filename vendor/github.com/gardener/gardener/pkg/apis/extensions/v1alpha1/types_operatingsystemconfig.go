@@ -47,7 +47,19 @@ type OperatingSystemConfigSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
 
+	// Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
+	// gets sent to the machine-controller-manager to bootstrap a VM, or it is downloaded by the
+	// cloud-config-downloader script already running on a bootstrapped VM.
+	Purpose OperatingSystemConfigPurpose `json:"purpose"`
+	// ReloadConfigFilePath is the path to the generated operating system configuration. If set, controllers
+	// are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
+	// the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
+	// "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
+	// +optional
+	ReloadConfigFilePath *string `json:"reloadConfigFilePath,omitempty"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
 	Units []Unit `json:"units,omitempty"`
 	// Files is a list of files that should get written to the host's file system.
@@ -69,6 +81,8 @@ type Unit struct {
 	// +optional
 	Content *string `json:"content,omitempty"`
 	// DropIns is a list of drop-ins for this unit.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
 	// +optional
 	DropIns []DropIn `json:"dropIns,omitempty"`
 }
@@ -80,9 +94,6 @@ type DropIn struct {
 	// Content is the content of the drop-in.
 	Content string `json:"content"`
 }
-
-// DefaultFilePermission is the default value for a permission of a file.
-const DefaultFilePermission int32 = 0644
 
 // File is a file that should get written to the host's file system. The content can either be inlined or
 // referenced from a secret in the same namespace.
@@ -132,6 +143,15 @@ type OperatingSystemConfigStatus struct {
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
+	// Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
+	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
+	// in the .spec.reloadConfigFilePath field.
+	// +optional
+	Command *string `json:"command,omitempty"`
+	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
+	// restarted when a new version has been downloaded.
+	// +optional
+	Units []string `json:"units,omitempty"`
 }
 
 // CloudConfig is a structure for containing the generated output for the given operating system
@@ -140,3 +160,21 @@ type CloudConfig struct {
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
+
+// OperatingSystemConfigPurpose  is a string alias.
+type OperatingSystemConfigPurpose string
+
+const (
+	// OperatingSystemConfigPurposeProvision describes that the operating system configuration is used to bootstrap a
+	// new VM.
+	OperatingSystemConfigPurposeProvision OperatingSystemConfigPurpose = "provision"
+	// OperatingSystemConfigPurposeReconcile describes that the operating system configuration is executed on an already
+	// provisioned VM by the cloud-config-downloader script.
+	OperatingSystemConfigPurposeReconcile OperatingSystemConfigPurpose = "reconcile"
+
+	// OperatingSystemConfigDefaultFilePermission is the default value for a permission of a file.
+	OperatingSystemConfigDefaultFilePermission int32 = 0644
+	// OperatingSystemConfigSecretDataKey is a constant for the key in a secret's `.data` field containing the
+	// results of a computed cloud config.
+	OperatingSystemConfigSecretDataKey = "cloud_config"
+)

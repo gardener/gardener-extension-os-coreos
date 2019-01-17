@@ -18,7 +18,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:a8db97315d2ca119f75195ed5b8ad73710b23df5290c069ab54e04074696e60c"
+  digest = "1:6370d59412464f3244dcdae15c0ccc33c2829fc7c61c47743987d200169565f3"
   name = "github.com/gardener/gardener"
   packages = [
     "pkg/apis/extensions",
@@ -26,7 +26,7 @@
     "pkg/client/extensions/clientset/versioned/scheme",
   ]
   pruneopts = "NUT"
-  revision = "754bd0b27c148d895c956a4083ffe2b01f2bf900"
+  revision = "8b8186794dfcc9d7cd1606330f5b5699374d96f7"
 
 [[projects]]
   branch = "master"
@@ -150,14 +150,6 @@
   pruneopts = "NUT"
   revision = "1624edc4454b8682399def8740d46db5e4362ba4"
   version = "v1.1.5"
-
-[[projects]]
-  digest = "1:4059c14e87a2de3a434430340521b5feece186c1469eff0834c29a63870de3ed"
-  name = "github.com/konsorten/go-windows-terminal-sequences"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -306,15 +298,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "b1a0a9a36d7453ba0f62578b99712f3a6c5f82d1"
-
-[[projects]]
-  digest = "1:e256b859ab89f005f2f639f5ed9807d0873d9135e27c6382f419b840ff9abe71"
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
-  version = "v1.3.0"
+  revision = "bf6a532e95b1f7a62adf0ab5050a5bb2237ad2f4"
 
 [[projects]]
   digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
@@ -365,7 +349,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8b1f96630c62fc6efe748fd49272edeba5c11adb8953a889d1c8ceda11eff605"
+  digest = "1:c6dcc7dda097763a2b92da0f4f008853f045f6949c8d9d619871e9b4cc44f1ac"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -379,7 +363,7 @@
     "idna",
   ]
   pruneopts = "NUT"
-  revision = "915654e7eabcea33ae277abbecf52f0d8b7a9fdc"
+  revision = "ed066c81e75eba56dd9bd2139ade88125b855585"
 
 [[projects]]
   branch = "master"
@@ -394,14 +378,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:abc6c776da4fb3b71392ec4f4edafbbf981ef39bf6e6af06cc424f28c4a4ccc7"
+  digest = "1:dd1d4e6d8e6743e46e298994c8fb97c3cd31650f4a8ae1b98f2b876f5325fea0"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "11f53e03133963fb11ae0588e08b5e0b85be8be5"
+  revision = "770c60269bf0ef965e9e7ac8bedcb6bca2a1cefd"
 
 [[projects]]
   digest = "1:8a12cbc891b7130d3f660f8a309e5c0b083f831e6ac38cdaa1f12e63c12d6bea"
@@ -713,10 +697,9 @@
   input-imports = [
     "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1",
     "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme",
+    "github.com/go-logr/logr",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
-    "github.com/sirupsen/logrus",
-    "go.uber.org/zap",
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",

@@ -1,6 +1,6 @@
 [[override]]
   name = "github.com/gardener/gardener"
-  revision = "754bd0b27c148d895c956a4083ffe2b01f2bf900"
+  revision = "8b8186794dfcc9d7cd1606330f5b5699374d96f7"
   #version = "0.17.0"
 
 [[override]]

@@ -33,9 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// CloudConfigSecretDataKey is a constant for the key in a secret's `.data` field containing the results
-// of a computed cloud config.
-const CloudConfigSecretDataKey = "cloud_config"
+var coreOSCloudInitCommand = fmt.Sprintf("/usr/bin/coreos-cloudinit --from-file=")
 
 type operatingSystemConfigActuator struct {
 	client client.Client
@@ -76,7 +74,7 @@ func (c *operatingSystemConfigActuator) Delete(ctx context.Context, config *exte
 }
 
 func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
-	cloudConfig, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
+	cloudConfig, units, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
 	if err != nil {
 		config.Status.ObservedGeneration = config.Generation
 		config.Status.LastOperation, config.Status.LastError = controller.ReconcileError(extensionsv1alpha1.LastOperationTypeReconcile, fmt.Sprintf("Could not generate cloud config: %v", err), 50)
@@ -89,7 +87,7 @@ func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *e
 	secret := &corev1.Secret{
 		ObjectMeta: secretObjectMetaForConfig(config),
 		Data: map[string][]byte{
-			CloudConfigSecretDataKey: []byte(cloudConfig),
+			extensionsv1alpha1.OperatingSystemConfigSecretDataKey: []byte(cloudConfig),
 		},
 	}
 
@@ -110,6 +108,11 @@ func (c *operatingSystemConfigActuator) reconcile(ctx context.Context, config *e
 			Namespace: secret.Namespace,
 		},
 	}
+	if path := config.Spec.ReloadConfigFilePath; path != nil {
+		command := coreOSCloudInitCommand + *path
+		config.Status.Command = &command
+	}
+	config.Status.Units = units
 	config.Status.ObservedGeneration = config.Generation
 	config.Status.LastOperation, config.Status.LastError = controller.ReconcileSucceeded(extensionsv1alpha1.LastOperationTypeReconcile, "Successfully generated cloud config")
 	return c.client.Status().Update(ctx, config)
@@ -142,7 +145,7 @@ func secretObjectMetaForConfig(config *extensionsv1alpha1.OperatingSystemConfig)
 	}
 }
 
-func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
+func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, error) {
 	cloudConfig := &CloudConfig{
 		CoreOS: CoreOS{
 			Update: Update{
@@ -161,7 +164,10 @@ func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx
 		},
 	}
 
+	unitNames := make([]string, 0, len(config.Spec.Units))
 	for _, unit := range config.Spec.Units {
+		unitNames = append(unitNames, unit.Name)
+
 		u := Unit{Name: unit.Name}
 
 		if unit.Command != nil {
@@ -189,7 +195,7 @@ func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx
 			Path: file.Path,
 		}
 
-		permissions := extensionsv1alpha1.DefaultFilePermission
+		permissions := extensionsv1alpha1.OperatingSystemConfigDefaultFilePermission
 		if p := file.Permissions; p != nil {
 			permissions = *p
 		}
@@ -203,12 +209,12 @@ func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx
 		if file.Content.SecretRef != nil {
 			var secret corev1.Secret
 			if err := c.client.Get(ctx, client.ObjectKey{Name: file.Content.SecretRef.Name, Namespace: config.Namespace}, &secret); err != nil {
-				return "", err
+				return "", nil, err
 			}
 
 			data, ok := secret.Data[file.Content.SecretRef.DataKey]
 			if !ok {
-				return "", fmt.Errorf("could not find key %q in data of secret %q", file.Content.SecretRef.DataKey, file.Content.SecretRef.Name)
+				return "", nil, fmt.Errorf("could not find key %q in data of secret %q", file.Content.SecretRef.DataKey, file.Content.SecretRef.Name)
 			}
 
 			f.Encoding = "b64"
@@ -218,7 +224,12 @@ func (c *operatingSystemConfigActuator) cloudConfigFromOperatingSystemConfig(ctx
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, f)
 	}
 
-	return cloudConfig.String()
+	data, err := cloudConfig.String()
+	if err != nil {
+		return "", nil, err
+	}
+
+	return data, unitNames, nil
 }
 
 // String returns the string representation of the CloudConfig structure.

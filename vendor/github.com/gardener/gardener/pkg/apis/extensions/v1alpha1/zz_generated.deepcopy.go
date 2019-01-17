@@ -282,6 +282,11 @@ func (in *OperatingSystemConfigList) DeepCopyObject() runtime.Object {
 func (in *OperatingSystemConfigSpec) DeepCopyInto(out *OperatingSystemConfigSpec) {
 	*out = *in
 	out.DefaultSpec = in.DefaultSpec
+	if in.ReloadConfigFilePath != nil {
+		in, out := &in.ReloadConfigFilePath, &out.ReloadConfigFilePath
+		*out = new(string)
+		**out = **in
+	}
 	if in.Units != nil {
 		in, out := &in.Units, &out.Units
 		*out = make([]Unit, len(*in))
@@ -317,6 +322,16 @@ func (in *OperatingSystemConfigStatus) DeepCopyInto(out *OperatingSystemConfigSt
 		in, out := &in.CloudConfig, &out.CloudConfig
 		*out = new(CloudConfig)
 		**out = **in
+	}
+	if in.Command != nil {
+		in, out := &in.Command, &out.Command
+		*out = new(string)
+		**out = **in
+	}
+	if in.Units != nil {
+		in, out := &in.Units, &out.Units
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	return
 }
