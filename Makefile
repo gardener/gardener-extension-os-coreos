@@ -28,7 +28,7 @@ IGNORE_OPERATION_ANNOTATION := true
 
 .PHONY: format
 format:
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/format.sh .
+	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/format.sh ./cmd ./pkg
 
 .PHONY: clean
 clean:
@@ -44,7 +44,7 @@ check:
 
 .PHONY: test
 test:
-	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/test.sh ./...
+	@$(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/test.sh -r ./...
 
 .PHONY: verify
 verify: check generate test format
@@ -84,7 +84,7 @@ revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/*
-	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/.ci/*
+	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener-extensions/hack/.ci/*
 
 .PHONY: start
 start:

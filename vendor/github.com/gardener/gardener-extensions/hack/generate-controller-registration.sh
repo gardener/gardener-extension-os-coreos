@@ -28,7 +28,7 @@ generate-controller-registration <name> <chart-dir> <dest> <kind-and-type> [kind
     <dest>            The destination file to write the registration YAML to.
     <kind-and-type>   A tuple of kind and type of the controller registration to generate.
                       Separated by ':'.
-                      Example: OperatingSystemConfig:os-coreos
+                      Example: OperatingSystemConfig:foobar
     <kinds-and-types> Further tuples of kind and type of the controller registration to generate.
                       Separated by ':'.
 EOM
@@ -66,7 +66,7 @@ function cleanup {
 trap cleanup EXIT ERR INT TERM
 
 export HELM_HOME="$temp_helm_home"
-helm init --client-only > /dev/null 2>&1
+[ "$(helm version --client --template "{{.Version}}" | head -c2 | tail -c1)" = "3" ] || helm init --client-only > /dev/null 2>&1
 helm package "$CHART_DIR" --version "$VERSION" --app-version "$VERSION" --destination "$temp_dir" > /dev/null
 tar -xzm -C "$temp_extract_dir" -f "$temp_dir"/*
 chart="$(tar --sort=name -c --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01' -C "$temp_extract_dir" "$(basename "$temp_extract_dir"/*)" | gzip -n | base64 | tr -d '\n')"

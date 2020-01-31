@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/gardener/gardener v0.35.1-0.20200128130120-5b69a02f511a
-	github.com/gardener/gardener-extensions v1.2.1-0.20200129094554-c446e6f3b53c
+	github.com/gardener/gardener-extensions v1.3.0
 	github.com/go-logr/logr v0.1.0
 	github.com/gobuffalo/packr/v2 v2.1.0
 	github.com/onsi/ginkgo v1.10.1
