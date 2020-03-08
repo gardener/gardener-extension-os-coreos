@@ -1,0 +1,32 @@
+#cloud-config
+
+coreos:
+  update:
+    reboot_strategy: "off"
+  units:
+  - name: update-engine.service
+    mask: true
+  - name: locksmithd.service
+    mask: true
+  - name: containerd.service
+    drop_ins:
+    - name: 11-exec-start-config.conf
+      content: |-
+        [Service]
+        ExecStart=
+        ExecStart=/run/torcx/bin/containerd --config /etc/containerd/config.toml
+        Restart=on-failure
+  - name: docker.service
+    command: restart
+    drop_ins:
+    - name: 11-exec-start-config.conf
+      content: |-
+        [Service]
+        ExecStart=
+        ExecStart=/run/torcx/bin/dockerd --host=fd:// --containerd=/run/containerd/containerd.sock --selinux-enabled=true
+write_files:
+- encoding: b64
+  content: aW5zdGFsbCBzY3RwIC9iaW4vdHJ1ZQ==
+  owner: root
+  path: /etc/modprobe.d/sctp.conf
+  permissions: "0644"

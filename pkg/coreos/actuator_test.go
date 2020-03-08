@@ -16,6 +16,8 @@ package coreos_test
 
 import (
 	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gobuffalo/packr/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +25,7 @@ import (
 
 var _ = Describe("CloudConfig", func() {
 	var cloudConfig *coreos.CloudConfig
+	var box = packr.NewBox("./testfiles")
 
 	BeforeEach(func() {
 		cloudConfig = &coreos.CloudConfig{}
@@ -43,6 +46,24 @@ coreos:
     reboot_strategy: "off"
 `
 			Expect(cloudConfig.String()).To(Equal(expected))
+		})
+
+		It("should return the correct provision cloud-config", func() {
+			configProvision := &extensionsv1alpha1.OperatingSystemConfig{
+				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+					Purpose: "reconcile",
+					CRIConfig: &extensionsv1alpha1.CRIConfig{ Name: extensionsv1alpha1.CRINameContainerD,},
+					Units: []extensionsv1alpha1.Unit{{
+						Name: "containerd.service",
+					}},
+				},
+
+			}
+			userData, _, _, err := coreos.NewActuator().Reconcile(nil, configProvision)
+			Expect(err).NotTo(HaveOccurred())
+			expectedCloudInit, err2 := box.Find("cloud-init-reconcile")
+			Expect(err2).NotTo(HaveOccurred())
+			Expect(userData).To(Equal(expectedCloudInit))
 		})
 	})
 })

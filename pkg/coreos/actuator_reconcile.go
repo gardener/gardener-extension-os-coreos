@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
+	consts "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,6 +75,8 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		}
 	}
 
+	enableContainerD := config.Spec.CRIConfig != nil && config.Spec.CRIConfig.Name == extensionsv1alpha1.CRINameContainerD
+
 	unitNames := make([]string, 0, len(config.Spec.Units))
 	for _, unit := range config.Spec.Units {
 		unitNames = append(unitNames, unit.Name)
@@ -97,6 +100,23 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 			})
 		}
 
+		if unit.Name == consts.OperatingSystemConfigUnitNameContainerDService && enableContainerD {
+			u.DropIns = append(u.DropIns, UnitDropIn{
+				Name:    "11-exec-start-config.conf",
+				Content: ContainerDUnitDropInContent,
+			})
+		}
+
+		cloudConfig.CoreOS.Units = append(cloudConfig.CoreOS.Units, u)
+	}
+
+	if config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile && enableContainerD {
+		u := Unit{Name: consts.OperatingSystemConfigUnitNameDockerService}
+		u.Command = "restart"
+		u.DropIns = []UnitDropIn{{
+			Name:    "11-exec-start-config.conf",
+			Content: string(DockerUnitDropInContent),
+		}}
 		cloudConfig.CoreOS.Units = append(cloudConfig.CoreOS.Units, u)
 	}
 
