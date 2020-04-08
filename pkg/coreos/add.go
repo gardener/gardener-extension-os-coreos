@@ -15,7 +15,7 @@
 package coreos
 
 import (
-	"github.com/gardener/gardener-extensions/pkg/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
