@@ -12,7 +12,6 @@ gardener-extension-os-coreos:
             image: 'eu.gcr.io/gardener-project/gardener/extensions/os-coreos'
             dockerfile: 'Dockerfile'
             target: gardener-extension-os-coreos
-    steps: ~
   jobs:
     head-update:
       traits:

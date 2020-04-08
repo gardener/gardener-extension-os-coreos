@@ -20,9 +20,9 @@ import (
 
 	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
 
-	"github.com/gardener/gardener-extensions/pkg/controller"
-	controllercmd "github.com/gardener/gardener-extensions/pkg/controller/cmd"
-	"github.com/gardener/gardener-extensions/pkg/util"
+	"github.com/gardener/gardener/extensions/pkg/controller"
+	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/spf13/cobra"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

@@ -17,7 +17,7 @@ package coreos
 import (
 	"context"
 
-	"github.com/gardener/gardener-extensions/pkg/controller/operatingsystemconfig"
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"

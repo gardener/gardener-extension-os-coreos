@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var coreOSCloudInitCommand = fmt.Sprintf("/usr/bin/coreos-cloudinit --from-file=")
+var coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
 
 func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
 	cloudConfig, units, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
