@@ -50,12 +50,14 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 			},
 			Units: []Unit{
 				{
-					Name: "update-engine.service",
-					Mask: true,
+					Name:    "update-engine.service",
+					Mask:    true,
+					Command: "stop",
 				},
 				{
-					Name: "locksmithd.service",
-					Mask: true,
+					Name:    "locksmithd.service",
+					Mask:    true,
+					Command: "stop",
 				},
 			},
 		},

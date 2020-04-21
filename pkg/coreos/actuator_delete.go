@@ -20,6 +20,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-func (c *actuator) delete(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
+func (c *actuator) delete(_ context.Context, _ *extensionsv1alpha1.OperatingSystemConfig) error {
 	return nil
 }

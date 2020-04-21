@@ -14,7 +14,7 @@
 
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := os-coreos
-REGISTRY                    := eu.gcr.io/gardener-project
+REGISTRY                    := eu.gcr.io/gardener-project/gardener
 IMAGE_PREFIX                := $(REGISTRY)/extensions
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HACK_DIR                    := $(REPO_ROOT)/hack
@@ -33,7 +33,8 @@ start:
 		-mod=vendor \
 		-ldflags $(LD_FLAGS) \
 		./cmd/$(EXTENSION_PREFIX)-$(NAME) \
-		--leader-election=$(LEADER_ELECTION)
+		--leader-election=$(LEADER_ELECTION) \
+		--ignore-operation-annotation=$(IGNORE_OPERATION_ANNOTATION)
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
