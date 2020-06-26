@@ -53,3 +53,11 @@ func (c *actuator) Reconcile(ctx context.Context, config *extensionsv1alpha1.Ope
 func (c *actuator) Delete(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
 	return c.delete(ctx, config)
 }
+
+func (c *actuator) Restore(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
+	return c.Reconcile(ctx, config)
+}
+
+func (c *actuator) Migrate(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) error {
+	return nil
+}
