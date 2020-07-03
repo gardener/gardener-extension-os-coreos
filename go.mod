@@ -1,6 +1,6 @@
 module github.com/gardener/gardener-extension-os-coreos
 
-go 1.13
+go 1.14
 
 require (
 	github.com/gardener/gardener v1.6.5
