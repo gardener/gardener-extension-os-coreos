@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // Log is the logger for predicates.
@@ -87,54 +86,6 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 func ShootNotFailed() predicate.Predicate {
 	return FromMapper(&shootNotFailedMapper{log: Log.WithName("shoot-not-failed")},
 		CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
-}
-
-type or struct {
-	predicates []predicate.Predicate
-}
-
-func (o *or) orRange(f func(predicate.Predicate) bool) bool {
-	for _, p := range o.predicates {
-		if f(p) {
-			return true
-		}
-	}
-	return false
-}
-
-// Create implements Predicate.
-func (o *or) Create(event event.CreateEvent) bool {
-	return o.orRange(func(p predicate.Predicate) bool { return p.Create(event) })
-}
-
-// Delete implements Predicate.
-func (o *or) Delete(event event.DeleteEvent) bool {
-	return o.orRange(func(p predicate.Predicate) bool { return p.Delete(event) })
-}
-
-// Update implements Predicate.
-func (o *or) Update(event event.UpdateEvent) bool {
-	return o.orRange(func(p predicate.Predicate) bool { return p.Update(event) })
-}
-
-// Generic implements Predicate.
-func (o *or) Generic(event event.GenericEvent) bool {
-	return o.orRange(func(p predicate.Predicate) bool { return p.Generic(event) })
-}
-
-// InjectFunc implements Injector.
-func (o *or) InjectFunc(f inject.Func) error {
-	for _, p := range o.predicates {
-		if err := f(p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Or builds a logical OR gate of passed predicates.
-func Or(predicates ...predicate.Predicate) predicate.Predicate {
-	return &or{predicates}
 }
 
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
@@ -217,9 +168,8 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 	for _, extensionType := range extensionTypes {
 		orPreds = append(orPreds, HasType(extensionType))
 	}
-	orPred := Or(orPreds...)
 
-	return append(resultPredicates, orPred)
+	return append(resultPredicates, predicate.Or(orPreds...))
 }
 
 // HasPurpose filters the incoming Controlplanes  for the given spec.purpose

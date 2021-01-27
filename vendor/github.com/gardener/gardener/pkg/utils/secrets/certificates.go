@@ -103,7 +103,7 @@ func (s *CertificateSecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *CertificateSecretConfig) Generate() (Interface, error) {
+func (s *CertificateSecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateCertificate()
 }
 
@@ -123,7 +123,7 @@ func (s *CertificateSecretConfig) GenerateInfoData() (infodata.InfoData, error) 
 }
 
 // GenerateFromInfoData implements ConfigInterface
-func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*CertificateInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
@@ -365,7 +365,7 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, *Certif
 }
 
 // GenerateCertificateAuthorities get a map of wanted certificates and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
-// existing secret and makes a certificate Interface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
+// existing secret and makes a certificate DataInterface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
 // a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
 func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
 	type caOutput struct {
@@ -422,12 +422,16 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 	return generatedSecrets, certificateAuthorities, nil
 }
 
+// TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern is a constant for the pattern used when creating a temporary
+// directory for self-generated certificates.
+const TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern = "self-generated-server-certificates-"
+
 // SelfGenerateTLSServerCertificate generates a new CA certificate and signs a server certificate with it. It'll store
 // the generated CA + server certificate bytes into a temporary directory with the default filenames, e.g. `DataKeyCertificateCA`.
 // The function will return the *Certificate object as well as the path of the temporary directory where the
 // certificates are stored.
 func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certificate, string, error) {
-	tempDir, err := ioutil.TempDir("", "self-generated-server-certificates-")
+	tempDir, err := ioutil.TempDir("", TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern)
 	if err != nil {
 		return nil, "", err
 	}
