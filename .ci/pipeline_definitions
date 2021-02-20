@@ -6,6 +6,7 @@ gardener-extension-os-coreos:
       version:
         preprocess: 'inject-commit-hash'
       publish:
+        oci-builder: 'kaniko'
         dockerimages:
           gardener-extension-os-coreos:
             registry: 'gcr-readwrite'
@@ -41,6 +42,7 @@ gardener-extension-os-coreos:
               slack_cfg_name: 'scp_workspace'
         component_descriptor: ~
         publish:
+          oci-builder: 'kaniko'
           dockerimages:
             gardener-extension-os-coreos:
               tag_as_latest: true
