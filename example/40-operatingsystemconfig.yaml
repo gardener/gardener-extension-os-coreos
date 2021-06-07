@@ -3,7 +3,7 @@ apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
 metadata:
   name: pool-01-original
-  namespace: shoot--foo--bar
+  namespace: default
 spec:
   type: coreos
   units:
@@ -27,13 +27,13 @@ spec:
       EnvironmentFile=/etc/environment
       ExecStart=/opt/bin/health-monitor docker
   files:
-  - path: /var/lib/kubelet/ca.crt
+  - path: /var/lib/example/file.txt
     permissions: 0644
     encoding: b64
     content:
       secretRef:
-        name: default-token-5dtjz
-        dataKey: token
+        name: example-file
+        dataKey: file.txt
   - path: /etc/sysctl.d/99-k8s-general.conf
     permissions: 0644
     content:
