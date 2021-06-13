@@ -21,20 +21,21 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type certType string
@@ -81,6 +82,10 @@ type CertificateSecretConfig struct {
 	PKCS      int
 
 	Validity *time.Duration
+
+	// Now should only be set in tests.
+	// Defaults to time.Now
+	Now func() time.Time
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -265,9 +270,9 @@ func LoadCertificate(name string, privateKeyPEM, certificatePEM []byte) (*Certif
 }
 
 // LoadCAFromSecret loads a CA certificate from an existing Kubernetes secret object. It returns the secret, the Certificate and an error.
-func LoadCAFromSecret(k8sClient client.Client, namespace, name string) (*corev1.Secret, *Certificate, error) {
+func LoadCAFromSecret(ctx context.Context, k8sClient client.Client, namespace, name string) (*corev1.Secret, *Certificate, error) {
 	secret := &corev1.Secret{}
-	if err := k8sClient.Get(context.TODO(), kutil.Key(namespace, name), secret); err != nil {
+	if err := k8sClient.Get(ctx, kutil.Key(namespace, name), secret); err != nil {
 		return nil, nil, err
 	}
 
@@ -284,7 +289,13 @@ func LoadCAFromSecret(k8sClient client.Client, namespace, name string) (*corev1.
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	now := time.Now()
+	nowFunc := time.Now
+
+	if s.Now != nil {
+		nowFunc = s.Now
+	}
+
+	now := nowFunc()
 	expiration := now.AddDate(10, 0, 0) // + 10 years
 	if s.Validity != nil {
 		expiration = now.Add(*s.Validity)
@@ -335,7 +346,7 @@ func signCertificate(certificateTemplate *x509.Certificate, privateKey *rsa.Priv
 	return utils.EncodeCertificate(certificate), nil
 }
 
-func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecretConfig, namespace string) (*corev1.Secret, *Certificate, error) {
+func generateCA(ctx context.Context, k8sClusterClient kubernetes.Interface, config *CertificateSecretConfig, namespace string) (*corev1.Secret, *Certificate, error) {
 	certificate, err := config.GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
@@ -350,7 +361,7 @@ func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecret
 		Data: certificate.SecretData(),
 	}
 
-	if err := k8sClusterClient.Client().Create(context.TODO(), secret); err != nil {
+	if err := k8sClusterClient.Client().Create(ctx, secret); err != nil {
 		return nil, nil, err
 	}
 	return secret, certificate, nil
@@ -367,7 +378,7 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, *Certif
 // GenerateCertificateAuthorities get a map of wanted certificates and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
 // existing secret and makes a certificate DataInterface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
 // a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
-func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
+func GenerateCertificateAuthorities(ctx context.Context, k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
 	type caOutput struct {
 		secret      *corev1.Secret
 		certificate *Certificate
@@ -388,7 +399,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 		if existingSecret, ok := existingSecretsMap[name]; !ok {
 			go func(config *CertificateSecretConfig) {
 				defer wg.Done()
-				secret, certificate, err := generateCA(k8sClusterClient, config, namespace)
+				secret, certificate, err := generateCA(ctx, k8sClusterClient, config, namespace)
 				results <- &caOutput{secret, certificate, err}
 			}(config)
 		} else {
@@ -430,10 +441,10 @@ const TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern = "self-generated
 // the generated CA + server certificate bytes into a temporary directory with the default filenames, e.g. `DataKeyCertificateCA`.
 // The function will return the *Certificate object as well as the path of the temporary directory where the
 // certificates are stored.
-func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certificate, string, error) {
-	tempDir, err := ioutil.TempDir("", TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern)
+func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.IP) (cert *Certificate, ca *Certificate, dir string, rErr error) {
+	tempDir, err := os.MkdirTemp("", TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	caCertificateConfig := &CertificateSecretConfig{
@@ -443,32 +454,33 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certific
 	}
 	caCertificate, err := caCertificateConfig.GenerateCertificate()
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyCertificateCA), caCertificate.CertificatePEM, 0644); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificateCA), caCertificate.CertificatePEM, 0644); err != nil {
+		return nil, nil, "", err
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyPrivateKeyCA), caCertificate.PrivateKeyPEM, 0644); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKeyCA), caCertificate.PrivateKeyPEM, 0644); err != nil {
+		return nil, nil, "", err
 	}
 
 	certificateConfig := &CertificateSecretConfig{
-		Name:       name,
-		CommonName: name,
-		DNSNames:   dnsNames,
-		CertType:   ServerCert,
-		SigningCA:  caCertificate,
+		Name:        name,
+		CommonName:  name,
+		DNSNames:    dnsNames,
+		IPAddresses: ips,
+		CertType:    ServerCert,
+		SigningCA:   caCertificate,
 	}
 	certificate, err := certificateConfig.GenerateCertificate()
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyCertificate), certificate.CertificatePEM, 0644); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificate), certificate.CertificatePEM, 0644); err != nil {
+		return nil, nil, "", err
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, DataKeyPrivateKey), certificate.PrivateKeyPEM, 0644); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKey), certificate.PrivateKeyPEM, 0644); err != nil {
+		return nil, nil, "", err
 	}
 
-	return certificate, tempDir, nil
+	return certificate, caCertificate, tempDir, nil
 }

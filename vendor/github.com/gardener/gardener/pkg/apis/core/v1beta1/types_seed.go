@@ -48,6 +48,16 @@ type SeedList struct {
 	Items []Seed `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// SeedTemplate is a template for creating a Seed object.
+type SeedTemplate struct {
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// Specification of the desired behavior of the Seed.
+	// +optional
+	Spec SeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
 // SeedSpec is the specification of a Seed.
 type SeedSpec struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).
@@ -219,8 +229,7 @@ type SeedSettings struct {
 	// ShootDNS controls the shoot DNS settings for the seed.
 	// +optional
 	ShootDNS *SeedSettingShootDNS `json:"shootDNS,omitempty" protobuf:"bytes,3,opt,name=shootDNS"`
-	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the
-	// seed.
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
 	// +optional
 	LoadBalancerServices *SeedSettingLoadBalancerServices `json:"loadBalancerServices,omitempty" protobuf:"bytes,4,opt,name=loadBalancerServices"`
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
@@ -228,9 +237,7 @@ type SeedSettings struct {
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,5,opt,name=verticalPodAutoscaler"`
 }
 
-// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
-// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
-// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservation struct {
 	// Enabled controls whether the excess capacity reservation should be enabled.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
@@ -304,6 +311,8 @@ type SeedVolumeProvider struct {
 }
 
 const (
+	// SeedBackupBucketsReady is a constant for a condition type indicating that associated BackupBuckets are ready.
+	SeedBackupBucketsReady ConditionType = "BackupBucketsReady"
 	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
 	// bootstrapped.
 	SeedBootstrapped ConditionType = "Bootstrapped"

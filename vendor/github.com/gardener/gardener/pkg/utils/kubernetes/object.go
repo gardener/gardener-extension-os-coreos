@@ -16,23 +16,28 @@ package kubernetes
 
 import (
 	"context"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj runtime.Object) string {
-	k, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return "/"
+func ObjectName(obj client.Object) string {
+	if obj.GetNamespace() == "" {
+		return obj.GetName()
 	}
-	return k.String()
+	return client.ObjectKeyFromObject(obj).String()
 }
 
 // DeleteObjects deletes a list of Kubernetes objects.
-func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Object) error {
+func DeleteObjects(ctx context.Context, c client.Writer, objects ...client.Object) error {
 	for _, obj := range objects {
 		if err := DeleteObject(ctx, c, obj); err != nil {
 			return err
@@ -42,9 +47,65 @@ func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Obje
 }
 
 // DeleteObject deletes a Kubernetes object. It ignores 'not found' and 'no match' errors.
-func DeleteObject(ctx context.Context, c client.Client, object runtime.Object) error {
+func DeleteObject(ctx context.Context, c client.Writer, object client.Object) error {
 	if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
 	return nil
+}
+
+// DeleteObjectsFromListConditionally takes a Kubernetes List object. It iterates over its items and, if provided,
+// executes the predicate function. If it evaluates to true then the object will be deleted.
+func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, listObj client.ObjectList, predicateFn func(runtime.Object) bool) error {
+	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
+
+	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		if predicateFn == nil || predicateFn(obj) {
+			fns = append(fns, func(ctx context.Context) error {
+				return client.IgnoreNotFound(c.Delete(ctx, obj.(client.Object)))
+			})
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+// IsNamespaceInUse checks if there are is at least one object of the given kind left inside the given namespace.
+func IsNamespaceInUse(ctx context.Context, reader client.Reader, namespace string, gvk schema.GroupVersionKind) (bool, error) {
+	objects := &metav1.PartialObjectMetadataList{}
+	objects.SetGroupVersionKind(gvk)
+
+	if err := reader.List(ctx, objects, client.InNamespace(namespace), client.Limit(1)); err != nil {
+		return true, err
+	}
+
+	return len(objects.Items) > 0, nil
+}
+
+// CreateResetObjectFunc creates a func that will reset the given object to a new empty object every time the func is called.
+// This is useful for resetting an in-memory object before re-getting it from the API server / cache
+// to avoid executing checks on stale/removed object data e.g. annotations/lastError
+// (json decoder does not unset fields in the in-memory object that are unset in the API server's response)
+func CreateResetObjectFunc(obj runtime.Object, scheme *runtime.Scheme) (func(), error) {
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err != nil {
+		return nil, err
+	}
+	emptyObj, err := scheme.New(gvk)
+	if err != nil {
+		return nil, err
+	}
+	return func() {
+		deepCopyIntoObject(obj, emptyObj)
+	}, nil
+}
+
+// deepCopyIntoObject deep copies src into dest.
+// This is a workaround for runtime.Object's lack of a DeepCopyInto method, similar to what the c-r cache does:
+// https://github.com/kubernetes-sigs/controller-runtime/blob/55a329c15d6b4f91a9ff072fed6f6f05ff3339e7/pkg/cache/internal/cache_reader.go#L85-L90
+func deepCopyIntoObject(dest, src runtime.Object) {
+	reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src.DeepCopyObject()).Elem())
 }

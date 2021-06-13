@@ -3,6 +3,7 @@ package logger
 import (
 	"os"
 
+	"github.com/gobuffalo/envy"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,11 +53,7 @@ func NewLogger(level string) FieldLogger {
 	Example: time="2016-12-01T21:02:07-05:00" level=info duration=225.283µs human_size="106 B" method=GET path="/" render=199.79µs request_id=2265736089 size=106 status=200
 */
 func New(lvl Level) FieldLogger {
-	e := os.Getenv("GO_ENV")
-	if len(e) == 0 {
-		e = "development"
-	}
-	dev := e == "development"
+	dev := envy.Get("GO_ENV", "development") == "development"
 	l := logrus.New()
 	l.SetOutput(os.Stdout)
 	l.Level = lvl

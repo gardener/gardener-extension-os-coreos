@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gobuffalo/envy"
 	"github.com/gobuffalo/packr/v2/plog"
 )
 
@@ -54,11 +55,7 @@ func goCmd(name string, args ...string) error {
 		}
 	}
 
-	goBin := os.Getenv("GO_BIN")
-	if goBin == "" {
-		goBin = "go"
-	}
-	cp := exec.Command(goBin, cargs...)
+	cp := exec.Command(envy.Get("GO_BIN", "go"), cargs...)
 	plog.Logger.Debug(strings.Join(cp.Args, " "))
 	cp.Stderr = os.Stderr
 	cp.Stdin = os.Stdin

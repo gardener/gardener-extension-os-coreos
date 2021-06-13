@@ -71,6 +71,16 @@ func (intf *Interface) addImports(im map[string]bool) {
 	}
 }
 
+// AddMethod adds a new method, de-duplicating by method name.
+func (intf *Interface) AddMethod(m *Method) {
+	for _, me := range intf.Methods {
+		if me.Name == m.Name {
+			return
+		}
+	}
+	intf.Methods = append(intf.Methods, m)
+}
+
 // Method is a single method of an interface.
 type Method struct {
 	Name     string
@@ -250,11 +260,10 @@ func (mt *MapType) addImports(im map[string]bool) {
 // NamedType is an exported type in a package.
 type NamedType struct {
 	Package string // may be empty
-	Type    string // TODO: should this be typed Type?
+	Type    string
 }
 
 func (nt *NamedType) String(pm map[string]string, pkgOverride string) string {
-	// TODO: is this right?
 	if pkgOverride == nt.Package {
 		return nt.Type
 	}
@@ -311,7 +320,7 @@ func InterfaceFromInterfaceType(it reflect.Type) (*Interface, error) {
 			return nil, err
 		}
 
-		intf.Methods = append(intf.Methods, m)
+		intf.AddMethod(m)
 	}
 
 	return intf, nil

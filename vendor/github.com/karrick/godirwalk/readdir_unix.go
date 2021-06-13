@@ -8,19 +8,7 @@ import (
 	"unsafe"
 )
 
-// MinimumScratchBufferSize specifies the minimum size of the scratch buffer
-// that ReadDirents, ReadDirnames, Scanner, and Walk will use when reading file
-// entries from the operating system. During program startup it is initialized
-// to the result from calling `os.Getpagesize()` for non Windows environments,
-// and 0 for Windows.
-var MinimumScratchBufferSize = os.Getpagesize()
-
-func newScratchBuffer() []byte { return make([]byte, MinimumScratchBufferSize) }
-
-func readDirents(osDirname string, scratchBuffer []byte) ([]*Dirent, error) {
-	var entries []*Dirent
-	var workBuffer []byte
-
+func readdirents(osDirname string, scratchBuffer []byte) (Dirents, error) {
 	dh, err := os.Open(osDirname)
 	if err != nil {
 		return nil, err
@@ -28,55 +16,55 @@ func readDirents(osDirname string, scratchBuffer []byte) ([]*Dirent, error) {
 	fd := int(dh.Fd())
 
 	if len(scratchBuffer) < MinimumScratchBufferSize {
-		scratchBuffer = newScratchBuffer()
+		scratchBuffer = make([]byte, DefaultScratchBufferSize)
 	}
 
+	var entries Dirents
+	var de *syscall.Dirent
+
 	for {
-		if len(workBuffer) == 0 {
-			n, err := syscall.ReadDirent(fd, scratchBuffer)
-			// n, err := unix.ReadDirent(fd, scratchBuffer)
-			if err != nil {
-				_ = dh.Close()
-				return nil, err
-			}
-			if n <= 0 { // end of directory: normal exit
-				if err = dh.Close(); err != nil {
-					return nil, err
-				}
-				return entries, nil
-			}
-			workBuffer = scratchBuffer[:n] // trim work buffer to number of bytes read
-		}
-
-		sde := (*syscall.Dirent)(unsafe.Pointer(&workBuffer[0])) // point entry to first syscall.Dirent in buffer
-		workBuffer = workBuffer[reclen(sde):]                    // advance buffer for next iteration through loop
-
-		if inoFromDirent(sde) == 0 {
-			continue // inode set to 0 indicates an entry that was marked as deleted
-		}
-
-		nameSlice := nameFromDirent(sde)
-		nameLength := len(nameSlice)
-
-		if nameLength == 0 || (nameSlice[0] == '.' && (nameLength == 1 || (nameLength == 2 && nameSlice[1] == '.'))) {
-			continue
-		}
-
-		childName := string(nameSlice)
-		mt, err := modeTypeFromDirent(sde, osDirname, childName)
+		n, err := syscall.ReadDirent(fd, scratchBuffer)
 		if err != nil {
-			_ = dh.Close()
+			_ = dh.Close() // ignore potential error returned by Close
 			return nil, err
 		}
-		entries = append(entries, &Dirent{name: childName, path: osDirname, modeType: mt})
+		if n <= 0 {
+			break // end of directory reached
+		}
+		// Loop over the bytes returned by reading the directory entries.
+		buf := scratchBuffer[:n]
+		for len(buf) > 0 {
+			de = (*syscall.Dirent)(unsafe.Pointer(&buf[0])) // point entry to first syscall.Dirent in buffer
+			buf = buf[de.Reclen:]                           // advance buffer for next iteration through loop
+
+			if inoFromDirent(de) == 0 {
+				continue // this item has been deleted, but its entry not yet removed from directory listing
+			}
+
+			nameSlice := nameFromDirent(de)
+			namlen := len(nameSlice)
+			if (namlen == 0) || (namlen == 1 && nameSlice[0] == '.') || (namlen == 2 && nameSlice[0] == '.' && nameSlice[1] == '.') {
+				continue // skip unimportant entries
+			}
+			osChildname := string(nameSlice)
+
+			mode, err := modeType(de, osDirname, osChildname)
+			if err != nil {
+				_ = dh.Close() // ignore potential error returned by Close
+				return nil, err
+			}
+
+			entries = append(entries, &Dirent{name: osChildname, modeType: mode})
+		}
 	}
+
+	if err = dh.Close(); err != nil {
+		return nil, err
+	}
+	return entries, nil
 }
 
-func readDirnames(osDirname string, scratchBuffer []byte) ([]string, error) {
-	var entries []string
-	var workBuffer []byte
-	var sde *syscall.Dirent
-
+func readdirnames(osDirname string, scratchBuffer []byte) ([]string, error) {
 	dh, err := os.Open(osDirname)
 	if err != nil {
 		return nil, err
@@ -84,41 +72,44 @@ func readDirnames(osDirname string, scratchBuffer []byte) ([]string, error) {
 	fd := int(dh.Fd())
 
 	if len(scratchBuffer) < MinimumScratchBufferSize {
-		scratchBuffer = newScratchBuffer()
+		scratchBuffer = make([]byte, DefaultScratchBufferSize)
 	}
+
+	var entries []string
+	var de *syscall.Dirent
 
 	for {
-		if len(workBuffer) == 0 {
-			n, err := syscall.ReadDirent(fd, scratchBuffer)
-			// n, err := unix.ReadDirent(fd, scratchBuffer)
-			if err != nil {
-				_ = dh.Close()
-				return nil, err
+		n, err := syscall.ReadDirent(fd, scratchBuffer)
+		if err != nil {
+			_ = dh.Close() // ignore potential error returned by Close
+			return nil, err
+		}
+		if n <= 0 {
+			break // end of directory reached
+		}
+		// Loop over the bytes returned by reading the directory entries.
+		buf := scratchBuffer[:n]
+		for len(buf) > 0 {
+			de = (*syscall.Dirent)(unsafe.Pointer(&buf[0])) // point entry to first syscall.Dirent in buffer
+			buf = buf[de.Reclen:]                           // advance buffer for next iteration through loop
+
+			if inoFromDirent(de) == 0 {
+				continue // this item has been deleted, but its entry not yet removed from directory listing
 			}
-			if n <= 0 { // end of directory: normal exit
-				if err = dh.Close(); err != nil {
-					return nil, err
-				}
-				return entries, nil
+
+			nameSlice := nameFromDirent(de)
+			namlen := len(nameSlice)
+			if (namlen == 0) || (namlen == 1 && nameSlice[0] == '.') || (namlen == 2 && nameSlice[0] == '.' && nameSlice[1] == '.') {
+				continue // skip unimportant entries
 			}
-			workBuffer = scratchBuffer[:n] // trim work buffer to number of bytes read
+			osChildname := string(nameSlice)
+
+			entries = append(entries, osChildname)
 		}
-
-		// Handle first entry in the work buffer.
-		sde = (*syscall.Dirent)(unsafe.Pointer(&workBuffer[0])) // point entry to first syscall.Dirent in buffer
-		workBuffer = workBuffer[reclen(sde):]                   // advance buffer for next iteration through loop
-
-		if inoFromDirent(sde) == 0 {
-			continue // inode set to 0 indicates an entry that was marked as deleted
-		}
-
-		nameSlice := nameFromDirent(sde)
-		nameLength := len(nameSlice)
-
-		if nameLength == 0 || (nameSlice[0] == '.' && (nameLength == 1 || (nameLength == 2 && nameSlice[1] == '.'))) {
-			continue
-		}
-
-		entries = append(entries, string(nameSlice))
 	}
+
+	if err = dh.Close(); err != nil {
+		return nil, err
+	}
+	return entries, nil
 }

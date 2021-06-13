@@ -6,16 +6,17 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/gobuffalo/envy"
 	"github.com/gobuffalo/packr/v2/plog"
 )
 
 func construct(name string, path string) *Box {
 	return &Box{
-		Path:          path,
-		Name:          name,
-		ResolutionDir: resolutionDir(path),
-		resolvers:     resolversMap{},
-		dirs:          dirsMap{},
+		Path:		path,
+		Name:		name,
+		ResolutionDir:	resolutionDir(path),
+		resolvers:	resolversMap{},
+		dirs:		dirsMap{},
 	}
 }
 
@@ -30,7 +31,7 @@ func resolutionDirTestFilename(filename, og string) (string, bool) {
 		return ng, true
 	}
 
-	ng = filepath.Join(os.Getenv("GOPATH"), "src", ng)
+	ng = filepath.Join(envy.GoPath(), "src", ng)
 	if resolutionDirExists(ng, og) {
 		return ng, true
 	}

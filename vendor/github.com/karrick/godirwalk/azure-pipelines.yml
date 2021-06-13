@@ -7,12 +7,13 @@ trigger:
 - master
 
 variables:
-  GOVERSION: 1.13
+  GOVERSION: 1.12
 
 jobs:
   - job: Linux
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'Ubuntu-16.04'
+
     steps:
       - task: GoTool@0
         displayName: 'Use Go $(GOVERSION)'
@@ -21,12 +22,13 @@ jobs:
       - task: Go@0
         inputs:
           command: test
-          arguments: -race -v ./...
+          arguments: -v ./...
         displayName: 'Execute Tests'
 
   - job: Mac
     pool:
-      vmImage: 'macos-latest'
+      vmImage: 'macos-10.13'
+
     steps:
       - task: GoTool@0
         displayName: 'Use Go $(GOVERSION)'
@@ -35,12 +37,13 @@ jobs:
       - task: Go@0
         inputs:
           command: test
-          arguments: -race -v ./...
+          arguments: -v ./...
         displayName: 'Execute Tests'
 
   - job: Windows
     pool:
-      vmImage: 'windows-latest'
+      vmImage: 'vs2017-win2016'
+
     steps:
       - task: GoTool@0
         displayName: 'Use Go $(GOVERSION)'
@@ -49,5 +52,5 @@ jobs:
       - task: Go@0
         inputs:
           command: test
-          arguments: -race -v ./...
+          arguments: -v ./...
         displayName: 'Execute Tests'
