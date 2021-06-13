@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/gardener/gardener v1.25.0
 	github.com/go-logr/logr v0.3.0
-	github.com/gobuffalo/packr/v2 v2.5.1
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.5
 	github.com/spf13/cobra v1.1.1

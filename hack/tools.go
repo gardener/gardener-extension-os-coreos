@@ -21,6 +21,5 @@ import (
 	_ "github.com/gardener/gardener/hack"
 	_ "github.com/gardener/gardener/hack/.ci"
 
-	_ "github.com/gobuffalo/packr/v2/packr2"
 	_ "github.com/onsi/ginkgo/ginkgo"
 )
