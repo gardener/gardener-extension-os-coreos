@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
+	actuatorUtil "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/actuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
@@ -113,24 +112,17 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		}
 		f.RawFilePermissions = strconv.FormatInt(int64(permissions), 8)
 
-		if file.Content.Inline != nil {
-			f.Encoding = file.Content.Inline.Encoding
-			f.Content = file.Content.Inline.Data
+		rawContent, err := actuatorUtil.DataForFileContent(ctx, c.client, config.Namespace, &file.Content)
+		if err != nil {
+			return "", nil, err
 		}
 
-		if file.Content.SecretRef != nil {
-			var secret corev1.Secret
-			if err := c.client.Get(ctx, client.ObjectKey{Name: file.Content.SecretRef.Name, Namespace: config.Namespace}, &secret); err != nil {
-				return "", nil, err
-			}
-
-			data, ok := secret.Data[file.Content.SecretRef.DataKey]
-			if !ok {
-				return "", nil, fmt.Errorf("could not find key %q in data of secret %q", file.Content.SecretRef.DataKey, file.Content.SecretRef.Name)
-			}
-
+		if file.Content.TransmitUnencoded != nil && *file.Content.TransmitUnencoded {
+			f.Content = string(rawContent)
+			f.Encoding = ""
+		} else {
 			f.Encoding = "b64"
-			f.Content = base64.StdEncoding.EncodeToString(data)
+			f.Content = base64.StdEncoding.EncodeToString(rawContent)
 		}
 
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, f)
