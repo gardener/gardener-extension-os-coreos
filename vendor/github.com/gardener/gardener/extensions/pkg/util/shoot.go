@@ -39,7 +39,7 @@ const CAChecksumAnnotation = "checksum/ca"
 // If the CA of an existing Kubeconfig has changed, it creates a new Kubeconfig.
 // Newly generated Kubeconfigs are applied with the given `client` to the given `namespace`.
 func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificateConfig secrets.CertificateSecretConfig, namespace string) (*corev1.Secret, error) {
-	caSecret, ca, err := secrets.LoadCAFromSecret(c, namespace, v1beta1constants.SecretNameCACluster)
+	caSecret, ca, err := secrets.LoadCAFromSecret(ctx, c, namespace, v1beta1constants.SecretNameCACluster)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching CA secret %s/%s: %v", namespace, v1beta1constants.SecretNameCACluster, err)
 	}
@@ -75,10 +75,10 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 	config := secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &certificateConfig,
 
-		KubeConfigRequest: &secrets.KubeConfigRequest{
-			ClusterName:  namespace,
-			APIServerURL: kubeAPIServerServiceDNS(namespace),
-		},
+		KubeConfigRequests: []secrets.KubeConfigRequest{{
+			ClusterName:   namespace,
+			APIServerHost: kubeAPIServerServiceDNS(namespace),
+		}},
 	}
 
 	controlPlane, err := config.GenerateControlPlane()
