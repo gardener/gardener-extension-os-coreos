@@ -15,17 +15,84 @@
 package coreos_test
 
 import (
+	"context"
+	"encoding/base64"
+
 	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("CloudConfig", func() {
-	var cloudConfig *coreos.CloudConfig
+	var (
+		cloudConfig *coreos.CloudConfig
+		actuator    operatingsystemconfig.Actuator
+		osc         *extensionsv1alpha1.OperatingSystemConfig
+	)
 
 	BeforeEach(func() {
 		cloudConfig = &coreos.CloudConfig{}
+		actuator = coreos.NewActuator()
+
+		osc = &extensionsv1alpha1.OperatingSystemConfig{
+			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+				Files: []extensionsv1alpha1.File{{
+					Path:        "fooPath",
+					Permissions: pointer.Int32Ptr(0666),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "b64",
+							Data:     "YmFy",
+						},
+					},
+				}},
+			},
+		}
+	})
+
+	Describe("#Files", func() {
+
+		It("should add files to userData", func() {
+			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedFiles := `write_files:
+- encoding: b64
+  content: YmFy
+  path: fooPath
+  permissions: "666"`
+			actual := string(userData)
+			Expect(actual).To(ContainSubstring(expectedFiles))
+		})
+
+		It("should return files with flag TransmitUnencoded", func() {
+			osc.Spec.Files = append(osc.Spec.Files, extensionsv1alpha1.File{
+				Path: "fooPath",
+				Content: extensionsv1alpha1.FileContent{
+					TransmitUnencoded: pointer.BoolPtr(true),
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     base64.StdEncoding.EncodeToString([]byte("bar")),
+					},
+				}})
+			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedFiles := `write_files:
+- encoding: b64
+  content: YmFy
+  path: fooPath
+  permissions: "666"
+- content: bar
+  path: fooPath`
+			actual := string(userData)
+			Expect(actual).To(ContainSubstring(expectedFiles))
+		})
+
 	})
 
 	Describe("#String", func() {
