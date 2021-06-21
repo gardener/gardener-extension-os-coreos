@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
-	actuatorUtil "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/actuator"
+	actuatorutil "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/actuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -112,7 +112,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		}
 		f.RawFilePermissions = strconv.FormatInt(int64(permissions), 8)
 
-		rawContent, err := actuatorUtil.DataForFileContent(ctx, c.client, config.Namespace, &file.Content)
+		rawContent, err := actuatorutil.DataForFileContent(ctx, c.client, config.Namespace, &file.Content)
 		if err != nil {
 			return "", nil, err
 		}
