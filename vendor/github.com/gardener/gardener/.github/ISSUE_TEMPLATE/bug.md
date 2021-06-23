@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug encountered while working with this Gardener extension
+about: Report a bug encountered while operating Gardener
 labels: kind/bug
 
 ---
@@ -18,7 +18,7 @@ If multiple identifiers make sense you can also state the commands multiple time
 "/kind" identifiers:     api-change|bug|cleanup|discussion|enhancement|epic|impediment|poc|post-mortem|question|regression|task|technical-debt|test
 "/priority" identifiers: 1|2|3|4|5 (ordered from greatest to least)
 -->
-/area os
+/area TODO
 /kind bug
 /priority 3
 
@@ -32,8 +32,7 @@ If multiple identifiers make sense you can also state the commands multiple time
 
 **Environment**:
 
-- Gardener version (if relevant):
-- Extension version:
+- Gardener version:
 - Kubernetes version (use `kubectl version`):
 - Cloud provider or hardware configuration:
 - Others:
