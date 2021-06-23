@@ -68,6 +68,7 @@ revendor:
 	@GO111MODULE=on go mod tidy
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/*
 	@chmod +x $(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/.ci/*
+	@$(REPO_ROOT)/hack/update-github-templates.sh
 
 .PHONY: clean
 clean:
@@ -86,7 +87,6 @@ check:
 .PHONY: generate
 generate:
 	@$(REPO_ROOT)/vendor/github.com/gardener/gardener/hack/generate.sh ./charts/... ./cmd/... ./pkg/...
-	@$(REPO_ROOT)/hack/update-github-templates.sh
 
 .PHONY: format
 format:
