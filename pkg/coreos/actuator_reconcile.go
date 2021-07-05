@@ -16,6 +16,7 @@ package coreos
 
 import (
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"strconv"
@@ -24,7 +25,12 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-var coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
+var (
+	coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
+
+	//go:embed templates/containerd/run-command.sh.tpl
+	containerdTemplateContent string
+)
 
 func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
 	cloudConfig, units, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
@@ -128,10 +134,56 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, f)
 	}
 
+	if isContainerdEnabled(config.Spec.CRIConfig) && config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+		cloudConfig.CoreOS.Units = append(
+			cloudConfig.CoreOS.Units,
+			Unit{
+				Name:    "run-command.service",
+				Command: "start",
+				Enable:  true,
+				Content: `[Unit]
+Description=Oneshot unit used to run a script on node start-up.
+Before=containerd.service kubelet.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/environment
+ExecStart=/opt/bin/run-command.sh
+[Install]
+WantedBy=containerd.service kubelet.service
+`,
+			})
+
+		cloudConfig.WriteFiles = append(
+			cloudConfig.WriteFiles,
+			File{
+				Path:               "/etc/systemd/system/containerd.service.d/11-exec_config.conf",
+				RawFilePermissions: "0644",
+				Content: `[Service]
+SyslogIdentifier=containerd
+ExecStart=
+ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unpack/docker/bin/containerd --config /etc/containerd/config.toml'
+`,
+			},
+			File{
+				Path:               "/opt/bin/run-command.sh",
+				RawFilePermissions: "0755",
+				Content:            containerdTemplateContent,
+			})
+
+	}
+
 	data, err := cloudConfig.String()
 	if err != nil {
 		return "", nil, err
 	}
 
 	return data, unitNames, nil
+}
+
+func isContainerdEnabled(criConfig *extensionsv1alpha1.CRIConfig) bool {
+	if criConfig == nil {
+		return false
+	}
+
+	return criConfig.Name == extensionsv1alpha1.CRINameContainerD
 }

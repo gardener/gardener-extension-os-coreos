@@ -22,6 +22,8 @@ import (
 
 // CloudConfig is a structure containing the relevant fields for generating the Config
 // Container Linux specific cloud config. It can be marshalled to YAML.
+// Note, Flatcar cloud config does not support `runcmd`, see https://github.com/kinvolk/coreos-cloudinit/blob/flatcar-master/Documentation/cloud-config.md#file-format
+// Therefore, do not try to implement runcmd.
 type CloudConfig struct {
 	// Config contains CoreOS specific configuration.
 	CoreOS Config `yaml:"coreos,omitempty"`
