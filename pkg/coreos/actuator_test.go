@@ -95,6 +95,79 @@ var _ = Describe("CloudConfig", func() {
 
 	})
 
+	Describe("#Containerd", func() {
+		BeforeEach(func() {
+			osc.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
+			osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{
+				Name: extensionsv1alpha1.CRINameContainerD,
+			}
+		})
+
+		It("should add containerd files", func() {
+			osc.Spec.Files = []extensionsv1alpha1.File{}
+
+			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedFiles := `write_files:
+- content: |
+    [Service]
+    SyslogIdentifier=containerd
+    ExecStart=
+    ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unpack/docker/bin/containerd --config /etc/containerd/config.toml'
+  path: /etc/systemd/system/containerd.service.d/11-exec_config.conf
+  permissions: "0644"
+- content: |
+    #!/bin/bash
+
+    # initiliaze default containerd config if does not exist
+    if [ ! -s /etc/containerd/config.toml ]; then
+        mkdir -p /etc/containerd/
+        /run/torcx/unpack/docker/bin/containerd config default > /etc/containerd/config.toml
+        chmod 0644 /etc/containerd/config.toml
+    fi
+
+    # provide kubelet with access to the containerd binaries in /run/torcx/unpack/docker/bin
+    if [ ! -s /etc/systemd/system/kubelet.service.d/environment.conf ]; then
+        mkdir -p /etc/systemd/system/kubelet.service.d/
+        cat <<EOF | tee /etc/systemd/system/kubelet.service.d/environment.conf
+    [Service]
+    Environment="PATH=/run/torcx/unpack/docker/bin:$PATH"
+    EOF
+        chmod 0644 /etc/systemd/system/kubelet.service.d/environment.conf
+        systemctl daemon-reload
+    fi
+  path: /opt/bin/run-command.sh
+  permissions: "0755"`
+			actual := string(userData)
+			Expect(actual).To(ContainSubstring(expectedFiles))
+		})
+
+		It("should add run-command unit", func() {
+			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedUnit :=
+				`- name: run-command.service
+    enable: true
+    content: |
+      [Unit]
+      Description=Oneshot unit used to run a script on node start-up.
+      Before=containerd.service kubelet.service
+      [Service]
+      Type=oneshot
+      EnvironmentFile=/etc/environment
+      ExecStart=/opt/bin/run-command.sh
+      [Install]
+      WantedBy=containerd.service kubelet.service
+    command: start`
+
+			Expect(unitNames).To(ConsistOf("run-command.service"))
+			Expect(string(userData)).To(ContainSubstring(expectedUnit))
+
+		})
+	})
+
 	Describe("#String", func() {
 		It("should return the string representation with correct header", func() {
 			cloudConfig.CoreOS = coreos.Config{
