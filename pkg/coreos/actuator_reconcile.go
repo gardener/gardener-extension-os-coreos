@@ -153,6 +153,8 @@ WantedBy=containerd.service kubelet.service
 `,
 			})
 
+		unitNames = append(unitNames, "run-command.service")
+
 		cloudConfig.WriteFiles = append(
 			cloudConfig.WriteFiles,
 			File{
