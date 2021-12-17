@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../vendor/github.com/gardener/gardener/hack/generate-controller-registration.sh os-coreos . ../../VERSION ../../example/controller-registration.yaml OperatingSystemConfig:coreos OperatingSystemConfig:flatcar
+//go:generate sh -c "../../vendor/github.com/gardener/gardener/hack/generate-controller-registration.sh os-coreos . $(cat ../../VERSION) ../../example/controller-registration.yaml OperatingSystemConfig:coreos OperatingSystemConfig:flatcar"
 
 // Package chart enables go:generate support for generating the correct controller registration.
 package chart
