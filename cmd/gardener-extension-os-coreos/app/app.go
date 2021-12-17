@@ -35,8 +35,9 @@ const Name = "os-coreos"
 // NewControllerCommand creates a new CoreOS controller command.
 func NewControllerCommand(ctx context.Context) *cobra.Command {
 	var (
-		restOpts = &controllercmd.RESTOptions{}
-		mgrOpts  = &controllercmd.ManagerOptions{
+		generalOpts = &controllercmd.GeneralOptions{}
+		restOpts    = &controllercmd.RESTOptions{}
+		mgrOpts     = &controllercmd.ManagerOptions{
 			LeaderElection:             true,
 			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
 			LeaderElectionID:           controllercmd.LeaderElectionNameID(Name),
@@ -49,6 +50,7 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 		controllerSwitches = coreos.ControllerSwitchOptions()
 
 		aggOption = controllercmd.NewOptionAggregator(
+			generalOpts,
 			restOpts,
 			mgrOpts,
 			ctrlOpts,
