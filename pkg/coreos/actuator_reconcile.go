@@ -30,6 +30,9 @@ var (
 
 	//go:embed templates/containerd/run-command.sh.tpl
 	containerdTemplateContent string
+
+	//go:embed templates/configure-cgroupsv2.sh.tpl
+	cgroupsv2TemplateContent string
 )
 
 func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
@@ -174,6 +177,12 @@ ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unp
 
 	}
 
+	names, err := enableCGroupsV2(cloudConfig)
+	if err != nil {
+		return "", nil, err
+	}
+	unitNames = append(unitNames, names...)
+
 	data, err := cloudConfig.String()
 	if err != nil {
 		return "", nil, err
@@ -188,4 +197,37 @@ func isContainerdEnabled(criConfig *extensionsv1alpha1.CRIConfig) bool {
 	}
 
 	return criConfig.Name == extensionsv1alpha1.CRINameContainerD
+}
+
+func enableCGroupsV2(cloudConfig *CloudConfig) ([]string, error) {
+	var additionalUnitNames []string
+
+	cloudConfig.CoreOS.Units = append(
+		cloudConfig.CoreOS.Units,
+		Unit{
+			Name:    "enable-cgroupsv2.service",
+			Command: "start",
+			Enable:  true,
+			Content: `[Unit]
+Description=Oneshot unit used to patch the kubeconfig for cgroupsv2.
+Before=containerd.service kubelet.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/environment
+ExecStart=/opt/bin/configure-cgroupsv2.sh
+[Install]
+WantedBy=containerd.service kubelet.service
+`,
+		})
+	additionalUnitNames = append(additionalUnitNames, "enable-cgroupsv2")
+
+	cloudConfig.WriteFiles = append(
+		cloudConfig.WriteFiles,
+		File{
+			Path:               "/opt/bin/configure-cgroupsv2.sh",
+			RawFilePermissions: "0755",
+			Content:            cgroupsv2TemplateContent,
+		})
+
+	return additionalUnitNames, nil
 }
