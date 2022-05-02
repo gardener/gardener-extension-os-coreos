@@ -209,7 +209,7 @@ func enableCGroupsV2(cloudConfig *CloudConfig) ([]string, error) {
 			Command: "start",
 			Enable:  true,
 			Content: `[Unit]
-Description=Oneshot unit used to patch the kubeconfig for cgroupsv2.
+Description=Oneshot unit used to patch the kubelet config for cgroupsv2.
 Before=containerd.service kubelet.service
 [Service]
 Type=oneshot
