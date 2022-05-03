@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# initiliaze default containerd config if does not exist
-if [ ! -s /etc/containerd/config.toml ]; then
+CONTAINERD_CONFIG=/etc/containerd/config.toml
+
+# initialize default containerd config if does not exist
+if [ ! -s "$CONTAINERD_CONFIG" ]; then
     mkdir -p /etc/containerd/
-    /run/torcx/unpack/docker/bin/containerd config default > /etc/containerd/config.toml
-    chmod 0644 /etc/containerd/config.toml
+    /run/torcx/unpack/docker/bin/containerd config default > "$CONTAINERD_CONFIG"
+    chmod 0644 "$CONTAINERD_CONFIG"
+fi
+
+# if cgroups v2 are used, patch containerd configuration to use systemd cgroup driver
+if [[ -e /sys/fs/cgroup/cgroup.controllers ]]; then
+    sed -i "s/SystemdCgroup *= *false/SystemdCgroup = true/" "$CONTAINERD_CONFIG"
 fi
 
 # provide kubelet with access to the containerd binaries in /run/torcx/unpack/docker/bin
