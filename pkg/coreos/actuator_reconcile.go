@@ -219,7 +219,7 @@ ExecStart=/opt/bin/configure-cgroupsv2.sh
 WantedBy=containerd.service kubelet.service
 `,
 		})
-	additionalUnitNames = append(additionalUnitNames, "enable-cgroupsv2")
+	additionalUnitNames = append(additionalUnitNames, "enable-cgroupsv2.service")
 
 	cloudConfig.WriteFiles = append(
 		cloudConfig.WriteFiles,

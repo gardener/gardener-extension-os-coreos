@@ -169,7 +169,7 @@ var _ = Describe("CloudConfig", func() {
       WantedBy=containerd.service kubelet.service
     command: start`
 
-			Expect(unitNames).To(ConsistOf("run-command.service", "enable-cgroupsv2"))
+			Expect(unitNames).To(ConsistOf("run-command.service", "enable-cgroupsv2.service"))
 			Expect(string(userData)).To(ContainSubstring(expectedUnit))
 
 		})
@@ -226,7 +226,7 @@ var _ = Describe("CloudConfig", func() {
       WantedBy=containerd.service kubelet.service
     command: start`
 
-			Expect(unitNames).To(ConsistOf("enable-cgroupsv2"))
+			Expect(unitNames).To(ConsistOf("enable-cgroupsv2.service"))
 			Expect(string(userData)).To(ContainSubstring(expectedUnit))
 
 		})
