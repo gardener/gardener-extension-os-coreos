@@ -6,7 +6,7 @@ COPY . .
 RUN make install
 
 ############# gardener-extension-os-coreos
-FROM alpine:3.15.0 AS gardener-extension-os-coreos
+FROM alpine:3.15.4 AS gardener-extension-os-coreos
 
 COPY --from=builder /go/bin/gardener-extension-os-coreos /gardener-extension-os-coreos
 ENTRYPOINT ["/gardener-extension-os-coreos"]
