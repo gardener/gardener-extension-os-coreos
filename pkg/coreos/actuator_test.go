@@ -120,11 +120,18 @@ var _ = Describe("CloudConfig", func() {
 - content: |
     #!/bin/bash
 
-    # initiliaze default containerd config if does not exist
-    if [ ! -s /etc/containerd/config.toml ]; then
+    CONTAINERD_CONFIG=/etc/containerd/config.toml
+
+    # initialize default containerd config if does not exist
+    if [ ! -s "$CONTAINERD_CONFIG" ]; then
         mkdir -p /etc/containerd/
-        /run/torcx/unpack/docker/bin/containerd config default > /etc/containerd/config.toml
-        chmod 0644 /etc/containerd/config.toml
+        /run/torcx/unpack/docker/bin/containerd config default > "$CONTAINERD_CONFIG"
+        chmod 0644 "$CONTAINERD_CONFIG"
+    fi
+
+    # if cgroups v2 are used, patch containerd configuration to use systemd cgroup driver
+    if [[ -e /sys/fs/cgroup/cgroup.controllers ]]; then
+        sed -i "s/SystemdCgroup *= *false/SystemdCgroup = true/" "$CONTAINERD_CONFIG"
     fi
 
     # provide kubelet with access to the containerd binaries in /run/torcx/unpack/docker/bin
@@ -162,10 +169,68 @@ var _ = Describe("CloudConfig", func() {
       WantedBy=containerd.service kubelet.service
     command: start`
 
-			Expect(unitNames).To(ConsistOf("run-command.service"))
+			Expect(unitNames).To(ConsistOf("run-command.service", "enable-cgroupsv2.service"))
 			Expect(string(userData)).To(ContainSubstring(expectedUnit))
 
 		})
+	})
+
+	Describe("#CGroupsV2", func() {
+		BeforeEach(func() {
+			osc.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
+		})
+
+		It("should contain script to patch kubelet config for CGroupsV2", func() {
+			osc.Spec.Files = []extensionsv1alpha1.File{}
+
+			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedFiles :=
+				`write_files:
+- content: |
+    #!/bin/bash
+
+    KUBELET_CONFIG=/var/lib/kubelet/config/kubelet
+
+    if [[ -e /sys/fs/cgroup/cgroup.controllers ]]; then
+            echo "CGroups V2 are used!"
+            echo "=> Patch kubelet to use systemd as cgroup driver"
+            sed -i "s/cgroupDriver: cgroupfs/cgroupDriver: systemd/" "$KUBELET_CONFIG"
+    else
+            echo "No CGroups V2 used by system"
+    fi
+  path: /opt/bin/configure-cgroupsv2.sh
+  permissions: "0755"`
+
+			actual := string(userData)
+			Expect(actual).To(ContainSubstring(expectedFiles))
+		})
+
+		It("should add unit to enable cgroupsv2", func() {
+			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), osc)
+			Expect(err).To(BeNil())
+
+			expectedUnit :=
+				`- name: enable-cgroupsv2.service
+    enable: true
+    content: |
+      [Unit]
+      Description=Oneshot unit used to patch the kubelet config for cgroupsv2.
+      Before=containerd.service kubelet.service
+      [Service]
+      Type=oneshot
+      EnvironmentFile=/etc/environment
+      ExecStart=/opt/bin/configure-cgroupsv2.sh
+      [Install]
+      WantedBy=containerd.service kubelet.service
+    command: start`
+
+			Expect(unitNames).To(ConsistOf("enable-cgroupsv2.service"))
+			Expect(string(userData)).To(ContainSubstring(expectedUnit))
+
+		})
+
 	})
 
 	Describe("#String", func() {
