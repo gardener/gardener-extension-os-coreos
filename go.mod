@@ -34,3 +34,6 @@ replace (
 	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.4.0
 	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.4.0
 )
+
+// remove after update to sigs.k8s.io/controller-runtime v0.12.0
+replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
