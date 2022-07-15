@@ -6,7 +6,8 @@ COPY . .
 RUN make install
 
 ############# gardener-extension-os-coreos
-FROM alpine:3.15.4 AS gardener-extension-os-coreos
+FROM gcr.io/distroless/static-debian11:nonroot AS gardener-extension-os-coreos
+WORKDIR /
 
 COPY --from=builder /go/bin/gardener-extension-os-coreos /gardener-extension-os-coreos
 ENTRYPOINT ["/gardener-extension-os-coreos"]
