@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 
 	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
+	"github.com/go-logr/logr"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -26,6 +27,8 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 )
+
+var logger = logr.Discard()
 
 var _ = Describe("CloudConfig", func() {
 	var (
@@ -57,7 +60,7 @@ var _ = Describe("CloudConfig", func() {
 	Describe("#Files", func() {
 
 		It("should add files to userData", func() {
-			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -79,7 +82,7 @@ var _ = Describe("CloudConfig", func() {
 						Data:     base64.StdEncoding.EncodeToString([]byte("bar")),
 					},
 				}})
-			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -106,7 +109,7 @@ var _ = Describe("CloudConfig", func() {
 		It("should add containerd files", func() {
 			osc.Spec.Files = []extensionsv1alpha1.File{}
 
-			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -151,7 +154,7 @@ var _ = Describe("CloudConfig", func() {
 		})
 
 		It("should add run-command unit", func() {
-			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedUnit :=
@@ -183,7 +186,7 @@ var _ = Describe("CloudConfig", func() {
 		It("should contain script to patch kubelet config for CGroupsV2", func() {
 			osc.Spec.Files = []extensionsv1alpha1.File{}
 
-			userData, _, _, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles :=
@@ -208,7 +211,7 @@ var _ = Describe("CloudConfig", func() {
 		})
 
 		It("should add unit to enable cgroupsv2", func() {
-			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), osc)
+			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedUnit :=
