@@ -23,6 +23,8 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
+	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -47,7 +49,14 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 		ctrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
-		reconcileOpts      = &controllercmd.ReconcilerOptions{}
+		reconcileOpts = &controllercmd.ReconcilerOptions{}
+
+		heartbeatCtrlOpts = &heartbeatcmd.Options{
+			ExtensionName:        Name,
+			RenewIntervalSeconds: 30,
+			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
+		}
+
 		controllerSwitches = coreos.ControllerSwitchOptions()
 
 		aggOption = controllercmd.NewOptionAggregator(
@@ -55,6 +64,7 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 			restOpts,
 			mgrOpts,
 			ctrlOpts,
+			controllercmd.PrefixOption("heartbeat-", heartbeatCtrlOpts),
 			reconcileOpts,
 			controllerSwitches,
 		)
@@ -66,6 +76,10 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
+			}
+
+			if err := heartbeatCtrlOpts.Validate(); err != nil {
+				return err
 			}
 
 			// TODO: Make these flags configurable via command line parameters or component config file.
@@ -84,6 +98,7 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			ctrlOpts.Completed().Apply(&coreos.DefaultAddOptions.Controller)
+			heartbeatCtrlOpts.Completed().Apply(&heartbeat.DefaultAddOptions)
 
 			reconcileOpts.Completed().Apply(&coreos.DefaultAddOptions.IgnoreOperationAnnotation)
 
