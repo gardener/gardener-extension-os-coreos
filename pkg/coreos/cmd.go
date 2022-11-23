@@ -16,6 +16,7 @@ package coreos
 
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
+	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 )
 
@@ -23,5 +24,6 @@ import (
 func ControllerSwitchOptions() *cmd.SwitchOptions {
 	return cmd.NewSwitchOptions(
 		cmd.Switch(operatingsystemconfig.ControllerName, AddToManager),
+		cmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 	)
 }
