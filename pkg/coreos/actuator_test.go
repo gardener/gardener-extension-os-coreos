@@ -45,7 +45,7 @@ var _ = Describe("CloudConfig", func() {
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Files: []extensionsv1alpha1.File{{
 					Path:        "fooPath",
-					Permissions: pointer.Int32Ptr(0666),
+					Permissions: pointer.Int32(0666),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -76,7 +76,7 @@ var _ = Describe("CloudConfig", func() {
 			osc.Spec.Files = append(osc.Spec.Files, extensionsv1alpha1.File{
 				Path: "fooPath",
 				Content: extensionsv1alpha1.FileContent{
-					TransmitUnencoded: pointer.BoolPtr(true),
+					TransmitUnencoded: pointer.Bool(true),
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
 						Data:     base64.StdEncoding.EncodeToString([]byte("bar")),
