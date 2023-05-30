@@ -18,14 +18,14 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
-	"github.com/go-logr/logr"
-
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
 )
 
 var logger = logr.Discard()
