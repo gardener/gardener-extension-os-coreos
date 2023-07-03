@@ -8,7 +8,7 @@ In this document we describe how this configuration looks like and under which c
 
 Gardener allows you to create CoreOS based worker nodes by:
 1. Using a Gardener managed VPC
-2. Reusing a VPC that already exists (VPC `id` specified in [InfrastructureConfig](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md#infrastructureconfig)]
+2. Reusing a VPC that already exists (VPC `id` specified in [InfrastructureConfig](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#infrastructureconfig)]
 
 If the second option applies to your use-case please make sure that your VPC has enabled **DNS Support**. Otherwise CoreOS based nodes aren't able to join or operate in your cluster properly.
 
