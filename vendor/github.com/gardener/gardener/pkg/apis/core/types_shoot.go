@@ -92,7 +92,6 @@ type ShootSpec struct {
 	// This field is immutable.
 	SecretBindingName *string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-	// This field is immutable when the SeedChange feature gate is disabled.
 	SeedName *string
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
 	SeedSelector *SeedSelector
@@ -348,7 +347,10 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
+	// TODO(timuthy): Remove this field with release v1.87.
+
 	// Domains contains information about which domains shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
 	Domains *DNSIncludeExclude
 	// Primary indicates that this DNSProvider is used for shoot related domains.
 	Primary *bool
@@ -360,7 +362,10 @@ type DNSProvider struct {
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
 	Type *string
+	// TODO(timuthy): Remove this field with release v1.87.
+
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
 	Zones *DNSIncludeExclude
 }
 
@@ -431,7 +436,13 @@ type Kubernetes struct {
 	KubeProxy *KubeProxyConfig
 	// Kubelet contains configuration settings for the kubelet.
 	Kubelet *KubeletConfig
+	// Note: Even though 'Version' is an optional field for users, we deliberately chose to not make it a pointer
+	// because the field is guaranteed to be not-empty after the admission plugin processed the shoot object.
+	// Thus, pointer handling for this field is not beneficial and would make things more cumbersome.
+
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
+	// Defaults to the highest supported minor and patch version given in the referenced cloud profile.
+	// The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
@@ -529,10 +540,6 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-	//
-	// Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.
-	EnableBasicAuthentication *bool
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	OIDCConfig *OIDCConfig
 	// RuntimeConfig contains information about enabled or disabled APIs.
@@ -867,6 +874,8 @@ type KubeletConfig struct {
 	//  "4h" for Kubernetes < v1.26.
 	//  "5m" for Kubernetes >= v1.26.
 	StreamingConnectionIdleTimeout *metav1.Duration
+	// MemorySwap configures swap memory available to container workloads.
+	MemorySwap *MemorySwapConfiguration
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -921,6 +930,26 @@ type KubeletConfigReserved struct {
 	EphemeralStorage *resource.Quantity
 	// PID is the reserved process-ids.
 	PID *resource.Quantity
+}
+
+// SwapBehavior configures swap memory available to container workloads
+type SwapBehavior string
+
+const (
+	// LimitedSwap is a constant for the kubelet's swap behavior limitting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
+	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
+	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
+	LimitedSwap SwapBehavior = "LimitedSwap"
+	// UnlimitedSwap is a constant for the kubelet's swap behavior enabling Kubernetes workloads to use as much swap memory as required, up to the system limit (not limited by pod or container memory limits).
+	UnlimitedSwap SwapBehavior = "UnlimitedSwap"
+)
+
+// MemorySwapConfiguration contains kubelet swap configuration
+// For more information, please see KEP: 2400-node-swap
+type MemorySwapConfiguration struct {
+	// SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+	// defaults to: LimitedSwap
+	SwapBehavior *SwapBehavior
 }
 
 // Networking defines networking parameters for the shoot cluster.
@@ -1033,13 +1062,17 @@ type Worker struct {
 	Name string
 	// Machine contains information about the machine type and image.
 	Machine Machine
-	// Maximum is the maximum number of VMs to create.
+	// Maximum is the maximum number of machines to create.
+	// This value is divided by the number of configured zones for a fair distribution.
 	Maximum int32
-	// Minimum is the minimum number of VMs to create.
+	// Minimum is the minimum number of machines to create.
+	// This value is divided by the number of configured zones for a fair distribution.
 	Minimum int32
-	// MaxSurge is maximum number of VMs that are created during an update.
+	// MaxSurge is maximum number of machines that are created during an update.
+	// This value is divided by the number of configured zones for a fair distribution.
 	MaxSurge *intstr.IntOrString
-	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
+	// This value is divided by the number of configured zones for a fair distribution.
 	MaxUnavailable *intstr.IntOrString
 	// ProviderConfig is the provider-specific configuration for this worker pool.
 	ProviderConfig *runtime.RawExtension
@@ -1058,7 +1091,7 @@ type Worker struct {
 	Zones []string
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	MachineControllerManagerSettings *MachineControllerManagerSettings
-	// Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	Sysctls map[string]string
 }
 

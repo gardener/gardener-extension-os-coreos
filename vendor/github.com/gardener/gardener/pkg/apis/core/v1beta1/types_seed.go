@@ -74,6 +74,9 @@ type SeedSpec struct {
 	Provider SeedProvider `json:"provider" protobuf:"bytes,4,opt,name=provider"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 	// cluster to be registered as Seed.
+	//
+	// Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+	// hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.
 	// +optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,5,opt,name=secretRef"`
 	// Taints describes taints on the seed.
@@ -162,18 +165,22 @@ type SeedDNSProvider struct {
 	// Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
 }
 
-// Ingress configures the Ingress specific settings of the Seed cluster
+// Ingress configures the Ingress specific settings of the cluster
 type Ingress struct {
-	// Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
-	Domain string `json:"domain" protobuf:"bytes,1,opt,name=domain"`
+	// Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in Shoot/Garden clusters. Once set this field is immutable.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+	Domain string `json:"domain" protobuf:"bytes,1,name=domain"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
-	Controller IngressController `json:"controller" protobuf:"bytes,2,opt,name=controller"`
+	Controller IngressController `json:"controller" protobuf:"bytes,2,name=controller"`
 }
 
 // IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
 type IngressController struct {
-	// Kind defines which kind of IngressController to use, for example `nginx`
+	// Kind defines which kind of IngressController to use. At the moment only `nginx` is supported
+	// +kubebuilder:validation:Enum="nginx"
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// ProviderConfig specifies infrastructure specific configuration for the ingressController
 	// +optional
@@ -248,15 +255,15 @@ type SeedSettings struct {
 	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 	//
 	// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-	// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-	// Set this field to false to be prepared for the above-mentioned locking.
+	// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+	// Finally, the field will be removed from the API in a future version of Gardener.
 	// +optional
 	OwnerChecks *SeedSettingOwnerChecks `json:"ownerChecks,omitempty" protobuf:"bytes,6,opt,name=ownerChecks"`
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	// +optional
 	DependencyWatchdog *SeedSettingDependencyWatchdog `json:"dependencyWatchdog,omitempty" protobuf:"bytes,7,opt,name=dependencyWatchdog"`
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SeedSettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty" protobuf:"bytes,8,opt,name=topologyAwareRouting"`
 }
@@ -318,11 +325,9 @@ type SeedSettingVerticalPodAutoscaler struct {
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 //
 // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-// Set this field to false to be prepared for the above-mentioned locking.
+// The field is no-op and will be removed in a future version.
 type SeedSettingOwnerChecks struct {
-	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-	// is enabled by default because it is a prerequisite for control plane migration.
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
@@ -379,7 +384,7 @@ type SeedSettingDependencyWatchdogProber struct {
 }
 
 // SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
 	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.

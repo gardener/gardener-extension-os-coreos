@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -73,6 +74,9 @@ const (
 
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
+	// GardenletManagesMCMFlag is the name of the command line flag containing the Gardener version.
+	// TODO(rfranzke): Remove this flag when all provider extensions support the feature, see https://github.com/gardener/gardener/issues/7594.
+	GardenletManagesMCMFlag = "gardenlet-manages-mcm"
 
 	// LogLevelFlag is the name of the command line flag containing the log level.
 	LogLevelFlag = "log-level"
@@ -420,7 +424,7 @@ func (r *RESTOptions) AddFlags(fs *pflag.FlagSet) {
 type SwitchOptions struct {
 	Disabled []string
 
-	nameToAddToManager  map[string]func(manager.Manager) error
+	nameToAddToManager  map[string]func(context.Context, manager.Manager) error
 	addToManagerBuilder extensionscontroller.AddToManagerBuilder
 }
 
@@ -434,11 +438,11 @@ func (d *SwitchOptions) Register(pairs ...NameToAddToManagerFunc) {
 // NameToAddToManagerFunc binds a specific name to a controller's AddToManager function.
 type NameToAddToManagerFunc struct {
 	Name string
-	Func func(manager.Manager) error
+	Func func(context.Context, manager.Manager) error
 }
 
 // Switch binds the given name to the given AddToManager function.
-func Switch(name string, f func(manager.Manager) error) NameToAddToManagerFunc {
+func Switch(name string, f func(context.Context, manager.Manager) error) NameToAddToManagerFunc {
 	return NameToAddToManagerFunc{
 		Name: name,
 		Func: f,
@@ -447,7 +451,7 @@ func Switch(name string, f func(manager.Manager) error) NameToAddToManagerFunc {
 
 // NewSwitchOptions creates new SwitchOptions with the given initial pairs.
 func NewSwitchOptions(pairs ...NameToAddToManagerFunc) *SwitchOptions {
-	opts := SwitchOptions{nameToAddToManager: make(map[string]func(manager.Manager) error)}
+	opts := SwitchOptions{nameToAddToManager: make(map[string]func(context.Context, manager.Manager) error)}
 	opts.Register(pairs...)
 	return &opts
 }
@@ -486,26 +490,30 @@ func (d *SwitchOptions) Completed() *SwitchConfig {
 
 // SwitchConfig is the completed configuration of SwitchOptions.
 type SwitchConfig struct {
-	AddToManager func(manager.Manager) error
+	AddToManager func(context.Context, manager.Manager) error
 }
 
 // GeneralOptions are command line options that can be set for general configuration.
 type GeneralOptions struct {
-	// GardenerVersion string
+	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
+	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
+	GardenletManagesMCM bool
 
 	config *GeneralConfig
 }
 
 // GeneralConfig is a completed general configuration.
 type GeneralConfig struct {
-	// GardenerVersion string
+	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
+	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
+	GardenletManagesMCM bool
 }
 
 // Complete implements Complete.
 func (r *GeneralOptions) Complete() error {
-	r.config = &GeneralConfig{r.GardenerVersion}
+	r.config = &GeneralConfig{r.GardenerVersion, r.GardenletManagesMCM}
 	return nil
 }
 
@@ -517,4 +525,5 @@ func (r *GeneralOptions) Completed() *GeneralConfig {
 // AddFlags implements Flagger.AddFlags.
 func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
+	fs.BoolVar(&r.GardenletManagesMCM, GardenletManagesMCMFlag, false, "Specifies whether gardenlet manages the machine-controller-manager.")
 }
