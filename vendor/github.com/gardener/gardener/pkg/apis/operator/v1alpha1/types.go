@@ -63,11 +63,35 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
+	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
+	Ingress gardencorev1beta1.Ingress `json:"ingress"`
+	// Networking defines the networking configuration of the runtime cluster.
+	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
 	Provider Provider `json:"provider"`
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+}
+
+// RuntimeNetworking defines the networking configuration of the runtime cluster.
+type RuntimeNetworking struct {
+	// Nodes is the CIDR of the node network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
+	// Pods is the CIDR of the pod network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Pods string `json:"pods"`
+	// Services is the CIDR of the service network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Services string `json:"services"`
+	// BlockCIDRs is a list of network addresses that should be blocked.
+	// +optional
+	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
 }
 
 // Provider defines the provider-specific information for this cluster.
@@ -88,7 +112,7 @@ type Settings struct {
 	// +optional
 	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
 }
@@ -114,7 +138,7 @@ type SettingVerticalPodAutoscaler struct {
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 type SettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the cluster should be topology-aware.
 	// These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.
@@ -144,10 +168,14 @@ type VirtualCluster struct {
 
 // DNS holds information about DNS settings.
 type DNS struct {
-	// Domain is the external domain of the virtual garden cluster. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Domain string `json:"domain"`
+	// Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
+	// TODO(timuthy): Drop this after v1.74 has been released.
+	// +optional
+	Domain *string `json:"domain,omitempty"`
+	// Domains are the external domains of the virtual garden cluster.
+	// The first given domain in this list is immutable.
+	// +optional
+	Domains []string `json:"domains,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.
@@ -223,6 +251,9 @@ type Kubernetes struct {
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
 	// +optional
 	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
+	// KubeControllerManager contains configuration settings for the kube-controller-manager.
+	// +optional
+	KubeControllerManager *KubeControllerManagerConfig `json:"kubeControllerManager,omitempty"`
 	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
 	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
@@ -351,6 +382,20 @@ type Networking struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Services string `json:"services"`
+}
+
+// KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
+type KubeControllerManagerConfig struct {
+	// KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.
+	// +optional
+	*gardencorev1beta1.KubeControllerManagerConfig `json:",inline"`
+	// CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs
+	// may request shorter certs by setting `spec.expirationSeconds`.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +kubebuilder:default=`48h`
+	// +optional
+	CertificateSigningDuration *metav1.Duration `json:"certificateSigningDuration,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

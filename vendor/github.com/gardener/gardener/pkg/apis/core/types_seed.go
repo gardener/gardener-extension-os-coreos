@@ -70,6 +70,9 @@ type SeedSpec struct {
 	Provider SeedProvider
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 	// cluster to be registered as Seed.
+	//
+	// Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+	// hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.
 	SecretRef *corev1.SecretReference
 	// Settings contains certain settings for this seed cluster.
 	Settings *SeedSettings
@@ -205,13 +208,12 @@ type SeedSettings struct {
 	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 	//
 	// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-	// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-	// Set this field to false to be prepared for the above-mentioned locking.
+	// The field is no-op and will be removed in a future version.
 	OwnerChecks *SeedSettingOwnerChecks
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	DependencyWatchdog *SeedSettingDependencyWatchdog
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	TopologyAwareRouting *SeedSettingTopologyAwareRouting
 }
 
@@ -268,11 +270,9 @@ type SeedSettingVerticalPodAutoscaler struct {
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 //
 // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-// Set this field to false to be prepared for the above-mentioned locking.
+// The field is no-op and will be removed in a future version.
 type SeedSettingOwnerChecks struct {
-	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-	// is enabled by default because it is a prerequisite for control plane migration.
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
 	Enabled bool
 }
 
@@ -324,7 +324,7 @@ type SeedSettingDependencyWatchdogProber struct {
 }
 
 // SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
 	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.
