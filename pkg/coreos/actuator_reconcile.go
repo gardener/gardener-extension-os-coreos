@@ -35,10 +35,10 @@ var (
 	cgroupsv2TemplateContent string
 )
 
-func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
-	cloudConfig, units, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
+func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
+	cloudConfig, units, files, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("could not generate cloud config: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %v", err)
 	}
 
 	var command *string
@@ -47,10 +47,10 @@ func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.Ope
 		command = &cmd
 	}
 
-	return []byte(cloudConfig), command, units, nil
+	return []byte(cloudConfig), command, units, files, nil
 }
 
-func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, error) {
+func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, []string, error) {
 	cloudConfig := &CloudConfig{
 		CoreOS: Config{
 			Update: Update{
@@ -110,7 +110,9 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		cloudConfig.CoreOS.Units = append(cloudConfig.CoreOS.Units, u)
 	}
 
+	filePaths := make([]string, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
+		filePaths = append(filePaths, file.Path)
 		f := File{
 			Path: file.Path,
 		}
@@ -123,7 +125,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 
 		rawContent, err := actuatorutil.DataForFileContent(ctx, c.client, config.Namespace, &file.Content)
 		if err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 
 		if file.Content.TransmitUnencoded != nil && *file.Content.TransmitUnencoded {
@@ -179,16 +181,16 @@ ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unp
 
 	names, err := enableCGroupsV2(cloudConfig)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	unitNames = append(unitNames, names...)
 
 	data, err := cloudConfig.String()
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
-	return data, unitNames, nil
+	return data, unitNames, filePaths, nil
 }
 
 func isContainerdEnabled(criConfig *extensionsv1alpha1.CRIConfig) bool {
