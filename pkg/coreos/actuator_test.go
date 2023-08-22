@@ -60,7 +60,7 @@ var _ = Describe("CloudConfig", func() {
 	Describe("#Files", func() {
 
 		It("should add files to userData", func() {
-			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -82,7 +82,7 @@ var _ = Describe("CloudConfig", func() {
 						Data:     base64.StdEncoding.EncodeToString([]byte("bar")),
 					},
 				}})
-			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -109,7 +109,7 @@ var _ = Describe("CloudConfig", func() {
 		It("should add containerd files", func() {
 			osc.Spec.Files = []extensionsv1alpha1.File{}
 
-			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles := `write_files:
@@ -162,7 +162,7 @@ var _ = Describe("CloudConfig", func() {
 		})
 
 		It("should add run-command unit", func() {
-			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, unitNames, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedUnit :=
@@ -194,7 +194,7 @@ var _ = Describe("CloudConfig", func() {
 		It("should contain script to patch kubelet config for CGroupsV2", func() {
 			osc.Spec.Files = []extensionsv1alpha1.File{}
 
-			userData, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, _, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedFiles :=
@@ -219,7 +219,7 @@ var _ = Describe("CloudConfig", func() {
 		})
 
 		It("should add unit to enable cgroupsv2", func() {
-			userData, _, unitNames, err := actuator.Reconcile(context.TODO(), logger, osc)
+			userData, _, unitNames, _, err := actuator.Reconcile(context.TODO(), logger, osc)
 			Expect(err).To(BeNil())
 
 			expectedUnit :=
@@ -259,6 +259,27 @@ coreos:
     reboot_strategy: "off"
 `
 			Expect(cloudConfig.String()).To(Equal(expected))
+		})
+	})
+
+	Describe("#Filepaths", func() {
+		BeforeEach(func() {
+			content := extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: "",
+					Data:     "test",
+				},
+			}
+			osc.Spec.Files = []extensionsv1alpha1.File{
+				{Path: "foo", Content: content},
+				{Path: "bar", Content: content},
+				{Path: "baz", Content: content},
+			}
+		})
+		It("should return file paths", func() {
+			_, _, _, filePaths, err := actuator.Reconcile(context.TODO(), logger, osc)
+			Expect(err).To(BeNil())
+			Expect(filePaths).To(ConsistOf("foo", "bar", "baz"))
 		})
 	})
 })

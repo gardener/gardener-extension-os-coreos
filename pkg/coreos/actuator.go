@@ -46,7 +46,7 @@ func (c *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (c *actuator) Reconcile(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
+func (c *actuator) Reconcile(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
 	return c.reconcile(ctx, config)
 }
 
@@ -54,7 +54,7 @@ func (c *actuator) Delete(ctx context.Context, _ logr.Logger, config *extensions
 	return c.delete(ctx, config)
 }
 
-func (c *actuator) Restore(ctx context.Context, logger logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error) {
+func (c *actuator) Restore(ctx context.Context, logger logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
 	return c.Reconcile(ctx, logger, config)
 }
 
