@@ -25,7 +25,6 @@ import (
 	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -41,10 +40,9 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 		generalOpts = &controllercmd.GeneralOptions{}
 		restOpts    = &controllercmd.RESTOptions{}
 		mgrOpts     = &controllercmd.ManagerOptions{
-			LeaderElection:             true,
-			LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
-			LeaderElectionID:           controllercmd.LeaderElectionNameID(Name),
-			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
+			LeaderElection:          true,
+			LeaderElectionID:        controllercmd.LeaderElectionNameID(Name),
+			LeaderElectionNamespace: os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 		ctrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
