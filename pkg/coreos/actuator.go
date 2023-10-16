@@ -54,6 +54,10 @@ func (c *actuator) Delete(ctx context.Context, _ logr.Logger, config *extensions
 	return c.delete(ctx, config)
 }
 
+func (c *actuator) ForceDelete(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) error {
+	return c.delete(ctx, config)
+}
+
 func (c *actuator) Restore(ctx context.Context, logger logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
 	return c.Reconcile(ctx, logger, config)
 }
