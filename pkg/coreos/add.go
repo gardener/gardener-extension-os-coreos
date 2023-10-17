@@ -41,7 +41,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
-		Actuator:          NewActuator(),
+		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Types:             Types,

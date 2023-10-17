@@ -20,9 +20,14 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
@@ -35,11 +40,25 @@ var _ = Describe("CloudConfig", func() {
 		cloudConfig *coreos.CloudConfig
 		actuator    operatingsystemconfig.Actuator
 		osc         *extensionsv1alpha1.OperatingSystemConfig
+		ctrl        *gomock.Controller
+		mgr         *mockmanager.MockManager
 	)
 
 	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mgr = mockmanager.NewMockManager(ctrl)
+
+		// Create mock clients
+		client := mockclient.NewMockClient(ctrl)
+		mgr.EXPECT().GetClient().Return(client)
+
+		// Build scheme
+		scheme := runtime.NewScheme()
+		_ = corev1.AddToScheme(scheme)
+		mgr.EXPECT().GetScheme().Return(scheme)
+
 		cloudConfig = &coreos.CloudConfig{}
-		actuator = coreos.NewActuator()
+		actuator = coreos.NewActuator(mgr)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{

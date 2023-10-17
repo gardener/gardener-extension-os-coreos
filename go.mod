@@ -8,8 +8,10 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
 	github.com/spf13/cobra v1.7.0
+	go.uber.org/mock v0.2.0
 	golang.org/x/tools v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
+	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
 	k8s.io/component-base v0.28.2
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
@@ -79,7 +81,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	go.uber.org/mock v0.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
@@ -100,7 +101,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	istio.io/api v0.0.0-20230217221049-9d422bf48675 // indirect
 	istio.io/client-go v1.17.1 // indirect
-	k8s.io/api v0.28.2 // indirect
 	k8s.io/apiextensions-apiserver v0.28.2 // indirect
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.14.0 // indirect
 	k8s.io/client-go v0.28.2 // indirect
