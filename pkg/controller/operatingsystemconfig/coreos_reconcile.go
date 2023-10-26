@@ -29,16 +29,10 @@ import (
 
 var (
 	coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
-
-	//go:embed coreos/templates/containerd/run-command.sh.tpl
-	containerdTemplateContent string
-
-	//go:embed coreos/templates/configure-cgroupsv2.sh.tpl
-	cgroupsv2TemplateContent string
 )
 
-func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
-	cloudConfig, units, files, err := c.cloudConfigFromOperatingSystemConfig(ctx, config)
+func (a *actuator) legacyReconcile(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
+	cloudConfig, units, files, err := a.cloudConfigFromOperatingSystemConfig(ctx, config)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("could not generate cloud config: %v", err)
 	}
@@ -52,7 +46,7 @@ func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.Ope
 	return []byte(cloudConfig), command, units, files, nil
 }
 
-func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, []string, error) {
+func (a *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, []string, error) {
 	cloudConfig := &coreos.CloudConfig{
 		CoreOS: coreos.Config{
 			Update: coreos.Update{
@@ -125,7 +119,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		}
 		f.RawFilePermissions = strconv.FormatInt(int64(permissions), 8)
 
-		rawContent, err := actuatorutil.DataForFileContent(ctx, c.client, config.Namespace, &file.Content)
+		rawContent, err := actuatorutil.DataForFileContent(ctx, a.client, config.Namespace, &file.Content)
 		if err != nil {
 			return "", nil, nil, err
 		}
