@@ -93,7 +93,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		u := coreos.Unit{Name: unit.Name}
 
 		if unit.Command != nil {
-			u.Command = *unit.Command
+			u.Command = string(*unit.Command)
 		}
 		if unit.Enable != nil {
 			u.Enable = *unit.Enable
