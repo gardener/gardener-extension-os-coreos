@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coreos
+package operatingsystemconfig_test
 
 import (
-	"context"
+	"testing"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func (c *actuator) delete(_ context.Context, _ *extensionsv1alpha1.OperatingSystemConfig) error {
-	return nil
+func TestOperatingSystemConfig(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Controller OperatingSystemConfig Suite")
 }

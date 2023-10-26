@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coreos
+package operatingsystemconfig
 
 import (
 	"context"
@@ -23,15 +23,17 @@ import (
 
 	actuatorutil "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/actuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig/coreos"
 )
 
 var (
 	coreOSCloudInitCommand = "/usr/bin/coreos-cloudinit --from-file="
 
-	//go:embed templates/containerd/run-command.sh.tpl
+	//go:embed coreos/templates/containerd/run-command.sh.tpl
 	containerdTemplateContent string
 
-	//go:embed templates/configure-cgroupsv2.sh.tpl
+	//go:embed coreos/templates/configure-cgroupsv2.sh.tpl
 	cgroupsv2TemplateContent string
 )
 
@@ -51,12 +53,12 @@ func (c *actuator) reconcile(ctx context.Context, config *extensionsv1alpha1.Ope
 }
 
 func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, config *extensionsv1alpha1.OperatingSystemConfig) (string, []string, []string, error) {
-	cloudConfig := &CloudConfig{
-		CoreOS: Config{
-			Update: Update{
+	cloudConfig := &coreos.CloudConfig{
+		CoreOS: coreos.Config{
+			Update: coreos.Update{
 				RebootStrategy: "off",
 			},
-			Units: []Unit{
+			Units: []coreos.Unit{
 				{
 					Name:    "update-engine.service",
 					Mask:    true,
@@ -73,7 +75,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 
 	// blacklist sctp kernel module
 	if config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-		cloudConfig.WriteFiles = []File{
+		cloudConfig.WriteFiles = []coreos.File{
 			{
 				Encoding:           "b64",
 				Content:            base64.StdEncoding.EncodeToString([]byte("install sctp /bin/true")),
@@ -88,7 +90,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 	for _, unit := range config.Spec.Units {
 		unitNames = append(unitNames, unit.Name)
 
-		u := Unit{Name: unit.Name}
+		u := coreos.Unit{Name: unit.Name}
 
 		if unit.Command != nil {
 			u.Command = *unit.Command
@@ -101,7 +103,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 		}
 
 		for _, dropIn := range unit.DropIns {
-			u.DropIns = append(u.DropIns, UnitDropIn{
+			u.DropIns = append(u.DropIns, coreos.UnitDropIn{
 				Name:    dropIn.Name,
 				Content: dropIn.Content,
 			})
@@ -113,7 +115,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 	filePaths := make([]string, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
 		filePaths = append(filePaths, file.Path)
-		f := File{
+		f := coreos.File{
 			Path: file.Path,
 		}
 
@@ -142,7 +144,7 @@ func (c *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 	if isContainerdEnabled(config.Spec.CRIConfig) && config.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
 		cloudConfig.CoreOS.Units = append(
 			cloudConfig.CoreOS.Units,
-			Unit{
+			coreos.Unit{
 				Name:    "run-command.service",
 				Command: "start",
 				Enable:  true,
@@ -162,7 +164,7 @@ WantedBy=containerd.service kubelet.service
 
 		cloudConfig.WriteFiles = append(
 			cloudConfig.WriteFiles,
-			File{
+			coreos.File{
 				Path:               "/etc/systemd/system/containerd.service.d/11-exec_config.conf",
 				RawFilePermissions: "0644",
 				Content: `[Service]
@@ -171,7 +173,7 @@ ExecStart=
 ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unpack/docker/bin/containerd --config /etc/containerd/config.toml'
 `,
 			},
-			File{
+			coreos.File{
 				Path:               "/opt/bin/run-command.sh",
 				RawFilePermissions: "0755",
 				Content:            containerdTemplateContent,
@@ -201,12 +203,12 @@ func isContainerdEnabled(criConfig *extensionsv1alpha1.CRIConfig) bool {
 	return criConfig.Name == extensionsv1alpha1.CRINameContainerD
 }
 
-func enableCGroupsV2(cloudConfig *CloudConfig) ([]string, error) {
+func enableCGroupsV2(cloudConfig *coreos.CloudConfig) ([]string, error) {
 	var additionalUnitNames []string
 
 	cloudConfig.CoreOS.Units = append(
 		cloudConfig.CoreOS.Units,
-		Unit{
+		coreos.Unit{
 			Name:    "enable-cgroupsv2.service",
 			Command: "start",
 			Enable:  true,
@@ -225,7 +227,7 @@ WantedBy=containerd.service kubelet.service
 
 	cloudConfig.WriteFiles = append(
 		cloudConfig.WriteFiles,
-		File{
+		coreos.File{
 			Path:               "/opt/bin/configure-cgroupsv2.sh",
 			RawFilePermissions: "0755",
 			Content:            cgroupsv2TemplateContent,

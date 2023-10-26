@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coreos_test
+package operatingsystemconfig_test
 
 import (
 	"context"
@@ -30,7 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
-	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
+	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
+	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig/coreos"
 )
 
 var logger = logr.Discard()
@@ -58,7 +59,7 @@ var _ = Describe("CloudConfig", func() {
 		mgr.EXPECT().GetScheme().Return(scheme)
 
 		cloudConfig = &coreos.CloudConfig{}
-		actuator = coreos.NewActuator(mgr)
+		actuator = NewActuator(mgr)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{

@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCoreos(t *testing.T) {
+func TestCoreOS(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CoreOS Suite")
 }

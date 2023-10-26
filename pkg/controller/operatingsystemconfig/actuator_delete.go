@@ -12,18 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coreos
+package operatingsystemconfig
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/controller/cmd"
-	extensionsheartbeatcontroller "github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	"context"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// ControllerSwitchOptions are the cmd.SwitchOptions for the controllers of this provider.
-func ControllerSwitchOptions() *cmd.SwitchOptions {
-	return cmd.NewSwitchOptions(
-		cmd.Switch(operatingsystemconfig.ControllerName, AddToManager),
-		cmd.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
-	)
+func (c *actuator) delete(_ context.Context, _ *extensionsv1alpha1.OperatingSystemConfig) error {
+	return nil
 }

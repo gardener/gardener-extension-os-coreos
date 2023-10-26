@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package coreos
+package operatingsystemconfig
 
 import (
 	"context"
@@ -22,12 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var (
-	// DefaultAddOptions are the default controller.Options for AddToManager.
-	DefaultAddOptions = AddOptions{}
-	// Types are the types of OperatingSystemConfigs the coreos actuator / predicate are built for.
-	Types = []string{"coreos", "flatcar"}
-)
+// DefaultAddOptions are the default controller.Options for AddToManager.
+var DefaultAddOptions = AddOptions{}
 
 // AddOptions are the options for adding the controller to the manager.
 type AddOptions struct {
@@ -44,7 +40,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
-		Types:             Types,
+		Types:             []string{"coreos", "flatcar"},
 	})
 }
 
