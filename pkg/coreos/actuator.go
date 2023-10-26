@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type actuator struct {
@@ -32,18 +33,12 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled OperatingSystemConfigs.
-func NewActuator() operatingsystemconfig.Actuator {
-	return &actuator{logger: log.Log.WithName("coreos-operatingsystemconfig-actuator")}
-}
-
-func (c *actuator) InjectScheme(scheme *runtime.Scheme) error {
-	c.scheme = scheme
-	return nil
-}
-
-func (c *actuator) InjectClient(client client.Client) error {
-	c.client = client
-	return nil
+func NewActuator(mgr manager.Manager) operatingsystemconfig.Actuator {
+	return &actuator{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		logger: log.Log.WithName("coreos-operatingsystemconfig-actuator"),
+	}
 }
 
 func (c *actuator) Reconcile(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error) {
@@ -51,6 +46,10 @@ func (c *actuator) Reconcile(ctx context.Context, _ logr.Logger, config *extensi
 }
 
 func (c *actuator) Delete(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) error {
+	return c.delete(ctx, config)
+}
+
+func (c *actuator) ForceDelete(ctx context.Context, _ logr.Logger, config *extensionsv1alpha1.OperatingSystemConfig) error {
 	return c.delete(ctx, config)
 }
 
