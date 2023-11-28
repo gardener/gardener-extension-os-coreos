@@ -23,12 +23,13 @@ import (
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
+	osccontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/spf13/cobra"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener-extension-os-coreos/pkg/coreos"
+	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
 
 // Name is the name of the CoreOS controller.
@@ -55,7 +56,10 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
 		}
 
-		controllerSwitches = coreos.ControllerSwitchOptions()
+		controllerSwitches = controllercmd.NewSwitchOptions(
+			controllercmd.Switch(osccontroller.ControllerName, operatingsystemconfig.AddToManager),
+			controllercmd.Switch(heartbeat.ControllerName, heartbeat.AddToManager),
+		)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			generalOpts,
@@ -95,10 +99,13 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 
-			ctrlOpts.Completed().Apply(&coreos.DefaultAddOptions.Controller)
+			ctrlOpts.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.Controller)
 			heartbeatCtrlOpts.Completed().Apply(&heartbeat.DefaultAddOptions)
 
-			reconcileOpts.Completed().Apply(&coreos.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
+			// TODO(rfranzke): Remove the UseGardenerNodeAgent fields as soon as the general options no longer support
+			//  the GardenletUsesGardenerNodeAgent field.
+			operatingsystemconfig.DefaultAddOptions.UseGardenerNodeAgent = generalOpts.Completed().GardenletUsesGardenerNodeAgent
 
 			if err := controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add controller to manager: %w", err)
