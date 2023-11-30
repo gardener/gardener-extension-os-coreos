@@ -14,7 +14,7 @@
 
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := os-coreos
-REGISTRY                    := eu.gcr.io/gardener-project/gardener
+REGISTRY                    := europe-docker.pkg.dev/gardener-project/snapshots/gardener
 IMAGE_PREFIX                := $(REGISTRY)/extensions
 REPO_ROOT                   := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HACK_DIR                    := $(REPO_ROOT)/hack
