@@ -119,7 +119,8 @@ fi
 systemctl daemon-reload
 systemctl enable containerd && systemctl restart containerd
 systemctl enable docker && systemctl restart docker
-systemctl enable gardener-node-init && systemctl restart gardener-node-init`
+systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
+`
 
 		Describe("#Reconcile", func() {
 			It("should not return an error", func() {

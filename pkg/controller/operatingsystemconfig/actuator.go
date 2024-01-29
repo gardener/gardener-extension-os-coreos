@@ -90,7 +90,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	}
 	writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
 
-	return `#!/bin/bash
+	script := `#!/bin/bash
 if [ ! -s /etc/containerd/config.toml ]; then
   mkdir -p /etc/containerd/
   containerd config default > /etc/containerd/config.toml
@@ -109,7 +109,14 @@ chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
 systemctl daemon-reload
 systemctl enable containerd && systemctl restart containerd
 systemctl enable docker && systemctl restart docker
-systemctl enable gardener-node-init && systemctl restart gardener-node-init`, nil
+`
+
+	for _, unit := range osc.Spec.Units {
+		script += fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
+`, unit.Name, unit.Name)
+	}
+
+	return script, nil
 }
 
 //go:embed templates/configure-cgroupsv2.sh.tpl
