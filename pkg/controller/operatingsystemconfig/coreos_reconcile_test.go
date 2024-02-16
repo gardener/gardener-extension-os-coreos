@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig/coreos"
@@ -59,7 +59,7 @@ var _ = Describe("CloudConfig", func() {
 				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 				Files: []extensionsv1alpha1.File{{
 					Path:        "fooPath",
-					Permissions: pointer.Int32(0666),
+					Permissions: ptr.To[int32](0666),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -89,7 +89,7 @@ var _ = Describe("CloudConfig", func() {
 			osc.Spec.Files = append(osc.Spec.Files, extensionsv1alpha1.File{
 				Path: "fooPath",
 				Content: extensionsv1alpha1.FileContent{
-					TransmitUnencoded: pointer.Bool(true),
+					TransmitUnencoded: ptr.To(true),
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
 						Data:     base64.StdEncoding.EncodeToString([]byte("bar")),

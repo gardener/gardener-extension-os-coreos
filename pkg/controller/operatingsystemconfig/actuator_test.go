@@ -23,7 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -50,7 +50,7 @@ var _ = Describe("Actuator", func() {
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-				Units:   []extensionsv1alpha1.Unit{{Name: "some-unit", Content: pointer.String("foo")}},
+				Units:   []extensionsv1alpha1.Unit{{Name: "some-unit", Content: ptr.To("foo")}},
 				Files:   []extensionsv1alpha1.File{{Path: "/some/file", Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "bar"}}}},
 			},
 		}
@@ -152,8 +152,8 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 				Expect(unitNames).To(ConsistOf("some-unit", "enable-cgroupsv2.service"))
 				Expect(fileNames).To(ConsistOf("/some/file"))
 				Expect(extensionUnits).To(ConsistOf(
-					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop)},
-					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop)},
+					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
+					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
 					extensionsv1alpha1.Unit{
 						Name: "kubelet.service",
 						DropIns: []extensionsv1alpha1.DropIn{{
@@ -168,12 +168,12 @@ ExecStartPre=/opt/bin/kubelet_cgroup_driver.sh
 				Expect(extensionFiles).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/modprobe.d/sctp.conf",
-						Permissions: pointer.Int32(0644),
+						Permissions: ptr.To[int32](0644),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/opt/bin/kubelet_cgroup_driver.sh",
-						Permissions: pointer.Int32(0755),
+						Permissions: ptr.To[int32](0755),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `#!/bin/bash
 
 KUBELET_CONFIG=/var/lib/kubelet/config/kubelet
