@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -130,15 +130,15 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 
 	// disable automatic updates
 	extensionUnits = append(extensionUnits,
-		extensionsv1alpha1.Unit{Name: "update-engine.service", Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop)},
-		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: extensionsv1alpha1.UnitCommandPtr(extensionsv1alpha1.CommandStop)},
+		extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
+		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
 	)
 
 	// blacklist sctp kernel module
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filepath.Join("/", "etc", "modprobe.d", "sctp.conf"),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
-		Permissions: pointer.Int32(0644),
+		Permissions: ptr.To[int32](0644),
 	})
 
 	// add scripts and dropins for kubelet cgroup driver configuration
@@ -146,7 +146,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filePathKubeletCGroupDriverScript,
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: cgroupsv2TemplateContent}},
-		Permissions: pointer.Int32(0755),
+		Permissions: ptr.To[int32](0755),
 	})
 	extensionUnits = append(extensionUnits, extensionsv1alpha1.Unit{
 		Name: "kubelet.service",
