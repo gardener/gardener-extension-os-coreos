@@ -1,6 +1,7 @@
 module github.com/gardener/gardener-extension-os-coreos
 
-go 1.21
+go 1.22.0
+
 require (
 	github.com/gardener/gardener v1.89.0
 	github.com/go-logr/logr v1.3.0
