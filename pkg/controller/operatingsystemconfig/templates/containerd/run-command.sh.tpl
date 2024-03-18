@@ -4,8 +4,9 @@ CONTAINERD_CONFIG=/etc/containerd/config.toml
 
 ALTERNATE_LOGROTATE_PATH="/usr/bin/logrotate"
 
-# prefer containerd from torcx. Remove this special case once all flatcar versions
-# that use torcx have run out of support
+# prefer containerd from torcx
+# TODO(MichaelEischer): remove this special case once all flatcar versions that use torcx,
+# that is before 3815.2.0, have run out of support
 CONTAINERD="/usr/bin/containerd"
 if [ -x /run/torcx/unpack/docker/bin/containerd ]; then
     CONTAINERD="/run/torcx/unpack/docker/bin/containerd"
@@ -23,7 +24,8 @@ if [[ -e /sys/fs/cgroup/cgroup.controllers ]]; then
     sed -i "s/SystemdCgroup *= *false/SystemdCgroup = true/" "$CONTAINERD_CONFIG"
 fi
 
-# Remove this block once all flatcar versions that use torcx have run out of support
+# TODO(MichaelEischer): remove this block once all flatcar versions that use torcx,
+# that is before 3815.2.0, have run out of support
 # provide kubelet with access to the containerd binaries in /run/torcx/unpack/docker/bin
 if [ ! -s /etc/systemd/system/kubelet.service.d/environment.conf ]; then
     mkdir -p /etc/systemd/system/kubelet.service.d/

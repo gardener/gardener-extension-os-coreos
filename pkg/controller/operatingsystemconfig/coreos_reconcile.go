@@ -161,7 +161,8 @@ WantedBy=containerd.service kubelet.service
 			coreos.File{
 				Path:               "/etc/systemd/system/containerd.service.d/11-exec_config.conf",
 				RawFilePermissions: "0644",
-				Content: `# remove this file once flatcar versions that use torcx are no longer supported
+				Content: `# TODO(MichaelEischer): remove this file once all flatcar versions that use torcx,
+# that is before 3815.2.0, have run out of support
 [Service]
 SyslogIdentifier=containerd
 ExecStart=
