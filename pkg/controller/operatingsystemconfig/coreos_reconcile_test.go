@@ -127,10 +127,13 @@ var _ = Describe("CloudConfig", func() {
 
 			expectedFiles := `write_files:
 - content: |
+    # TODO(MichaelEischer): remove this file once all flatcar versions that use torcx,
+    # that is before 3815.2.0, have run out of support
     [Service]
     SyslogIdentifier=containerd
     ExecStart=
-    ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unpack/docker/bin/containerd --config /etc/containerd/config.toml'
+    # try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
+    ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'
   path: /etc/systemd/system/containerd.service.d/11-exec_config.conf
   permissions: "0644"
 - content: |
@@ -140,10 +143,18 @@ var _ = Describe("CloudConfig", func() {
 
     ALTERNATE_LOGROTATE_PATH="/usr/bin/logrotate"
 
+    # prefer containerd from torcx
+    # TODO(MichaelEischer): remove this special case once all flatcar versions that use torcx,
+    # that is before 3815.2.0, have run out of support
+    CONTAINERD="/usr/bin/containerd"
+    if [ -x /run/torcx/unpack/docker/bin/containerd ]; then
+        CONTAINERD="/run/torcx/unpack/docker/bin/containerd"
+    fi
+
     # initialize default containerd config if does not exist
     if [ ! -s "$CONTAINERD_CONFIG" ]; then
-        mkdir -p /etc/containerd/
-        /run/torcx/unpack/docker/bin/containerd config default > "$CONTAINERD_CONFIG"
+        mkdir -p "$(dirname "$CONTAINERD_CONFIG")"
+        ${CONTAINERD} config default > "$CONTAINERD_CONFIG"
         chmod 0644 "$CONTAINERD_CONFIG"
     fi
 
@@ -152,6 +163,8 @@ var _ = Describe("CloudConfig", func() {
         sed -i "s/SystemdCgroup *= *false/SystemdCgroup = true/" "$CONTAINERD_CONFIG"
     fi
 
+    # TODO(MichaelEischer): remove this block once all flatcar versions that use torcx,
+    # that is before 3815.2.0, have run out of support
     # provide kubelet with access to the containerd binaries in /run/torcx/unpack/docker/bin
     if [ ! -s /etc/systemd/system/kubelet.service.d/environment.conf ]; then
         mkdir -p /etc/systemd/system/kubelet.service.d/

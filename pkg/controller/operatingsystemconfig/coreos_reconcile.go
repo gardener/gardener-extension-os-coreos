@@ -161,10 +161,13 @@ WantedBy=containerd.service kubelet.service
 			coreos.File{
 				Path:               "/etc/systemd/system/containerd.service.d/11-exec_config.conf",
 				RawFilePermissions: "0644",
-				Content: `[Service]
+				Content: `# TODO(MichaelEischer): remove this file once all flatcar versions that use torcx,
+# that is before 3815.2.0, have run out of support
+[Service]
 SyslogIdentifier=containerd
 ExecStart=
-ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" /run/torcx/unpack/docker/bin/containerd --config /etc/containerd/config.toml'
+# try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
+ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'
 `,
 			},
 			coreos.File{
