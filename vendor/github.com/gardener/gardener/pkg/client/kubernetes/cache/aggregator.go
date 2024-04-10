@@ -70,6 +70,10 @@ func (c *aggregator) GetInformer(ctx context.Context, obj client.Object, opts ..
 	return c.cacheForObject(obj).GetInformer(ctx, obj, opts...)
 }
 
+func (c *aggregator) RemoveInformer(ctx context.Context, obj client.Object) error {
+	return c.cacheForObject(obj).RemoveInformer(ctx, obj)
+}
+
 func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cache.InformerGetOption) (cache.Informer, error) {
 	return c.cacheForKind(gvk).GetInformerForKind(ctx, gvk, opts...)
 }
@@ -88,6 +92,7 @@ func (c *aggregator) Start(ctx context.Context) error {
 			}
 		}(gvk, runtimecache)
 	}
+
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {
 			logf.Log.Error(err, "Fallback cache failed to start")
