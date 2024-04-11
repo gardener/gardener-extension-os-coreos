@@ -23,12 +23,6 @@ import (
 )
 
 var (
-	// ConstraintK8sEqual124 is a version constraint for versions == 1.24.
-	ConstraintK8sEqual124 *semver.Constraints
-	// ConstraintK8sGreaterEqual125 is a version constraint for versions >= 1.25.
-	ConstraintK8sGreaterEqual125 *semver.Constraints
-	// ConstraintK8sLess125 is a version constraint for versions < 1.25.
-	ConstraintK8sLess125 *semver.Constraints
 	// ConstraintK8sGreaterEqual126 is a version constraint for versions >= 1.26.
 	ConstraintK8sGreaterEqual126 *semver.Constraints
 	// ConstraintK8sLess126 is a version constraint for versions < 1.26.
@@ -47,12 +41,6 @@ var (
 
 func init() {
 	var err error
-	ConstraintK8sEqual124, err = semver.NewConstraint("~ 1.24.x-0")
-	utilruntime.Must(err)
-	ConstraintK8sGreaterEqual125, err = semver.NewConstraint(">= 1.25-0")
-	utilruntime.Must(err)
-	ConstraintK8sLess125, err = semver.NewConstraint("< 1.25-0")
-	utilruntime.Must(err)
 	ConstraintK8sGreaterEqual126, err = semver.NewConstraint(">= 1.26-0")
 	utilruntime.Must(err)
 	ConstraintK8sLess126, err = semver.NewConstraint("< 1.26-0")
@@ -103,6 +91,7 @@ func normalize(version string) string {
 	if idx != -1 {
 		v = v[:idx]
 	}
+
 	return v
 }
 
@@ -117,16 +106,18 @@ type VersionRange struct {
 // and less than RemovedInVersion (always true if RemovedInVersion is empty).
 func (r *VersionRange) Contains(version string) (bool, error) {
 	var constraint string
+
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		constraint = fmt.Sprintf(">= %s", r.AddedInVersion)
+		constraint = ">= " + r.AddedInVersion
 	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		constraint = fmt.Sprintf("< %s", r.RemovedInVersion)
+		constraint = "< " + r.RemovedInVersion
 	case r.AddedInVersion != "" && r.RemovedInVersion != "":
 		constraint = fmt.Sprintf(">= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
 	default:
 		constraint = "*"
 	}
+
 	return CheckVersionMeetsConstraint(version, constraint)
 }
 
@@ -134,9 +125,9 @@ func (r *VersionRange) Contains(version string) (bool, error) {
 func (r *VersionRange) SupportedVersionRange() string {
 	switch {
 	case r.AddedInVersion != "" && r.RemovedInVersion == "":
-		return fmt.Sprintf("versions >= %s", r.AddedInVersion)
+		return "versions >= " + r.AddedInVersion
 	case r.AddedInVersion == "" && r.RemovedInVersion != "":
-		return fmt.Sprintf("versions < %s", r.RemovedInVersion)
+		return "versions < " + r.RemovedInVersion
 	case r.AddedInVersion != "" && r.RemovedInVersion != "":
 		return fmt.Sprintf("versions >= %s, < %s", r.AddedInVersion, r.RemovedInVersion)
 	default:

@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -209,7 +210,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 		return nil, nil
 	}
 	if !ok2 {
-		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
+		return nil, errors.New("apiSrvMaxReplicas has to be specified for ManagedSeed API server autoscaler")
 	}
 
 	var apiServerAutoscaler ManagedSeedAPIServerAutoscaler
@@ -219,6 +220,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 		if err != nil {
 			return nil, err
 		}
+
 		apiServerAutoscaler.MinReplicas = &minReplicas
 	}
 
@@ -226,6 +228,7 @@ func parseManagedSeedAPIServerAutoscaler(settings map[string]string) (*ManagedSe
 	if err != nil {
 		return nil, err
 	}
+
 	apiServerAutoscaler.MaxReplicas = maxReplicas
 
 	return &apiServerAutoscaler, nil
@@ -270,6 +273,7 @@ func setDefaults_ManagedSeedAPIServer(apiServer *ManagedSeedAPIServer) {
 			MaxReplicas: 3,
 		}
 	}
+
 	setDefaults_ManagedSeedAPIServerAutoscaler(apiServer.Autoscaler)
 }
 
@@ -700,11 +704,13 @@ func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.Expirable
 	}
 
 	skippedNextMajorMinor := false
+
 	if foundVersion {
 		parse, err := semver.NewVersion(qualifyingVersion.Version)
 		if err != nil {
 			return false, "", err
 		}
+
 		skippedNextMajorMinor = getMajorOrMinor(*parse) > nextMinorOrMajorVersion
 	}
 
@@ -731,8 +737,10 @@ func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.Expirable
 // A version qualifies if its classification is not preview and the optional predicate does not filter out the version.
 // If the predicate returns true, the version is not considered for the latest qualifying version.
 func GetLatestQualifyingVersion(versions []gardencorev1beta1.ExpirableVersion, predicate ...VersionPredicate) (qualifyingVersionFound bool, latest *gardencorev1beta1.ExpirableVersion, err error) {
-	latestSemanticVersion := &semver.Version{}
-	var latestVersion *gardencorev1beta1.ExpirableVersion
+	var (
+		latestSemanticVersion = &semver.Version{}
+		latestVersion         *gardencorev1beta1.ExpirableVersion
+	)
 OUTER:
 	for _, v := range versions {
 		if v.Classification != nil && *v.Classification == gardencorev1beta1.ClassificationPreview {
@@ -1028,6 +1036,7 @@ func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) 
 	if bb == nil {
 		return false, ""
 	}
+
 	lastErr := bb.Status.LastError
 	if lastErr == nil {
 		return false, ""
@@ -1134,7 +1143,7 @@ func AnonymousAuthenticationEnabled(kubeAPIServerConfig *gardencorev1beta1.KubeA
 
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
 // It takes both spec.seedName and status.seedName into account.
-func CalculateSeedUsage(shootList []gardencorev1beta1.Shoot) map[string]int {
+func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
@@ -1426,25 +1435,13 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 	f(shoot.Status.Credentials.Rotation.ETCDEncryptionKey)
 }
 
-// IsPSPDisabled returns true if the PodSecurityPolicy plugin is explicitly disabled in the ShootSpec or the cluster version is >= 1.25.
-func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
-	// we have disabled the policy/v1beta1/podsecuritypolicies API for workerless Shoots
-	if IsWorkerless(shoot) {
-		return true
+// GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
+func GetAllZonesFromShoot(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	out := sets.New[string]()
+	for _, worker := range shoot.Spec.Provider.Workers {
+		out.Insert(worker.Zones...)
 	}
-
-	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-		return true
-	}
-
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && ptr.Deref(plugin.Disabled, false) {
-				return true
-			}
-		}
-	}
-	return false
+	return out
 }
 
 // IsFailureToleranceTypeZone returns true if failureToleranceType is zone else returns false.
@@ -1495,4 +1492,60 @@ func IsTopologyAwareRoutingForShootControlPlaneEnabled(seed *gardencorev1beta1.S
 // ShootHasOperationType returns true when the 'type' in the last operation matches the provided type.
 func ShootHasOperationType(lastOperation *gardencorev1beta1.LastOperation, lastOperationType gardencorev1beta1.LastOperationType) bool {
 	return lastOperation != nil && lastOperation.Type == lastOperationType
+}
+
+// KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
+func KubeAPIServerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
+	if kubeAPIServer == nil || kubeAPIServer.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeAPIServer.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
+}
+
+// KubeControllerManagerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-controller-manager for the given Shoot spec.
+func KubeControllerManagerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager
+	if kubeControllerManager == nil || kubeControllerManager.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeControllerManager.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
+}
+
+// KubeProxyFeatureGateDisabled returns whether the given feature gate is disabled for the kube-proxy for the given Shoot spec.
+func KubeProxyFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
+	kubeProxy := shoot.Spec.Kubernetes.KubeProxy
+	if kubeProxy == nil || kubeProxy.FeatureGates == nil {
+		return false
+	}
+
+	value, ok := kubeProxy.FeatureGates[featureGate]
+	if !ok {
+		return false
+	}
+	return !value
+}
+
+// ConvertShootList converts a list of Shoots to a list of pointers to Shoots.
+func ConvertShootList(list []gardencorev1beta1.Shoot) []*gardencorev1beta1.Shoot {
+	var result []*gardencorev1beta1.Shoot
+	for i := range list {
+		result = append(result, &list[i])
+	}
+	return result
+}
+
+// HasManagedIssuer checks if the shoot has managed issuer enabled.
+func HasManagedIssuer(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.GetAnnotations()[v1beta1constants.AnnotationAuthenticationIssuer] == v1beta1constants.AnnotationAuthenticationIssuerManaged
 }

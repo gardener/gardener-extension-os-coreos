@@ -29,11 +29,11 @@ import (
 	helmloader "helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
+	"helm.sh/helm/v3/pkg/ignore"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"k8s.io/helm/pkg/ignore"
 )
 
 const notesFileSuffix = "NOTES.txt"
@@ -99,6 +99,7 @@ func (r *chartRenderer) renderRelease(chart *helmchart.Chart, releaseName, names
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse values for chart %s: %w", chart.Metadata.Name, err)
 	}
+
 	valuesCopy, err := chartutil.ReadValues(parsedValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read values for chart %s: %w", chart.Metadata.Name, err)
@@ -166,6 +167,7 @@ func (c *RenderedChart) Manifest() []byte {
 // and values as the content of the corresponding file.
 func (c *RenderedChart) Files() map[string]map[string]string {
 	var files = make(map[string]map[string]string)
+
 	for _, manifest := range c.Manifests {
 		resourceName := getResourceName(manifest)
 		if resourceName == "" {
@@ -184,12 +186,14 @@ func (c *RenderedChart) Files() map[string]map[string]string {
 // FileContent returns explicitly the content of the provided <filename>.
 func (c *RenderedChart) FileContent(filename string) string {
 	var fileContent strings.Builder
+
 	for _, mf := range c.Manifests {
 		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
 			if fileContent.String() != "" {
 				// Add "---" to separate different resources
 				fileContent.WriteString("\n---\n")
 			}
+
 			fileContent.WriteString(mf.Content)
 		}
 	}
@@ -221,10 +225,9 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 }
 
 // loadEmbeddedFS is a copy of helm.sh/helm/v3/pkg/chart/loader.LoadDir with the difference that it uses an embed.FS.
-// Keep this func in sync with https://github.com/helm/helm/blob/v3.10.3/pkg/chart/loader/directory.go#L44-L120.
+// Keep this func in sync with https://github.com/helm/helm/blob/v3.14.2/pkg/chart/loader/directory.go#L43-L120.
 func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, error) {
 	var (
-		// TODO(acumino): Replace "k8s.io/helm/pkg/ignore" with "helm.sh/helm/v3/pkg/ignore" when we upgrade to a helm version that contains https://github.com/helm/helm/pull/12662.
 		rules = ignore.Empty()
 		files []*helmloader.BufferedFile
 	)
@@ -234,6 +237,7 @@ func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*helmchart.Chart, er
 		if err != nil {
 			return nil, err
 		}
+
 		rules = r
 	}
 

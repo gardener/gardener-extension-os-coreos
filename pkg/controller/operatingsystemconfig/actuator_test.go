@@ -35,7 +35,7 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		mgr = test.FakeManager{Client: fakeClient}
-		actuator = NewActuator(mgr, true)
+		actuator = NewActuator(mgr)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -127,13 +127,10 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 
 		Describe("#Reconcile", func() {
 			It("should not return an error", func() {
-				userData, command, unitNames, fileNames, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(userData)).To(Equal(expectedUserData))
-				Expect(command).To(BeNil())
-				Expect(unitNames).To(BeEmpty())
-				Expect(fileNames).To(BeEmpty())
 				Expect(extensionUnits).To(BeEmpty())
 				Expect(extensionFiles).To(BeEmpty())
 			})
@@ -147,13 +144,10 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 
 		Describe("#Reconcile", func() {
 			It("should not return an error", func() {
-				userData, command, unitNames, fileNames, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(userData).NotTo(BeEmpty()) // legacy logic is tested in ./generator/generator_test.go
-				Expect(command).To(BeNil())
-				Expect(unitNames).To(ConsistOf("some-unit", "enable-cgroupsv2.service"))
-				Expect(fileNames).To(ConsistOf("/some/file"))
+				Expect(userData).To(BeEmpty())
 				Expect(extensionUnits).To(ConsistOf(
 					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
 					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
