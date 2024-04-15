@@ -108,6 +108,11 @@ func (a *actuator) cloudConfigFromOperatingSystemConfig(ctx context.Context, con
 
 	filePaths := make([]string, 0, len(config.Spec.Files))
 	for _, file := range config.Spec.Files {
+
+		if file.Content.ImageRef != nil {
+			continue
+		}
+
 		filePaths = append(filePaths, file.Path)
 		f := coreos.File{
 			Path: file.Path,
