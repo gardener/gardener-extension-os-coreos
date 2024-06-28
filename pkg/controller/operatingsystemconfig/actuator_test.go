@@ -165,8 +165,8 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 				Expect(unitNames).To(ConsistOf("some-unit", "enable-cgroupsv2.service"))
 				Expect(fileNames).To(ConsistOf("/some/file"))
 				Expect(extensionUnits).To(ConsistOf(
-					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
-					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop)},
+					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
+					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 					extensionsv1alpha1.Unit{
 						Name: "kubelet.service",
 						DropIns: []extensionsv1alpha1.DropIn{{
