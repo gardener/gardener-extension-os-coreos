@@ -1,4 +1,16 @@
 gardener-extension-os-coreos:
+  templates: 
+    helmcharts:
+    - &os-coreos
+      name: os-coreos
+      dir: charts/gardener-extension-os-coreos
+      registry: europe-docker.pkg.dev/gardener-project/snapshots/charts/gardener/extensions
+      mappings:
+      - ref: ocm-resource:gardener-extension-os-coreos.repository
+        attribute: image.repository
+      - ref: ocm-resource:gardener-extension-os-coreos.tag
+        attribute: image.tag
+
   base_definition:
     traits:
       version:
@@ -25,11 +37,17 @@ gardener-extension-os-coreos:
         draft_release: ~
         options:
           public_build_logs: true
+        publish:
+          helmcharts:
+          - *os-coreos
     pull-request:
       traits:
         pull-request: ~
         options:
           public_build_logs: true
+        publish:
+          helmcharts:
+          - *os-coreos
     release:
       traits:
         version:
@@ -51,3 +69,6 @@ gardener-extension-os-coreos:
             gardener-extension-os-coreos:
               image: 'europe-docker.pkg.dev/gardener-project/releases/extensions/os-coreos'
               tag_as_latest: true
+          helmcharts:
+          - <<: *os-coreos
+            registry: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/extensions
