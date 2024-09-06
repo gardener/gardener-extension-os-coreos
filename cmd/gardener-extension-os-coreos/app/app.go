@@ -15,8 +15,10 @@ import (
 	heartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	osccontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/spf13/cobra"
 	componentbaseconfig "k8s.io/component-base/config"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
@@ -92,7 +94,7 @@ func NewControllerCommand(ctx context.Context) *cobra.Command {
 			ctrlOpts.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.Controller)
 			heartbeatCtrlOpts.Completed().Apply(&heartbeat.DefaultAddOptions)
 
-			reconcileOpts.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, ptr.To(extensionsv1alpha1.ExtensionClassShoot))
 
 			if err := controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add controller to manager: %w", err)
