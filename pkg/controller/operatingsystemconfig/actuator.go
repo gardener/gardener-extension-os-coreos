@@ -9,6 +9,8 @@ import (
 	_ "embed"
 	"fmt"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -16,16 +18,26 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	configv1alpha1 "github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 )
 
 type actuator struct {
-	client client.Client
+	client          client.Client
+	extensionConfig Config
+}
+
+// Config contains configuration for the extension service.
+type Config struct {
+	// Embed the entire Extension config here for direct access in the controller.
+	*configv1alpha1.ExtensionConfig
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled OperatingSystemConfigs.
-func NewActuator(mgr manager.Manager) operatingsystemconfig.Actuator {
+func NewActuator(mgr manager.Manager, extensionConfig Config) operatingsystemconfig.Actuator {
 	return &actuator{
-		client: mgr.GetClient(),
+		client:          mgr.GetClient(),
+		extensionConfig: extensionConfig,
 	}
 }
 
@@ -105,6 +117,28 @@ systemctl enable docker && systemctl restart docker
 //go:embed templates/configure-cgroupsv2.sh.tpl
 var cgroupsv2TemplateContent string
 
+//go:embed templates/ntp-config.conf.tpl
+var NTPConfigTemplateContent string
+
+func (a *actuator) generateNTPConfig() (string, error) {
+	t, err := template.New("ntp-config").Parse(NTPConfigTemplateContent)
+	if err != nil {
+		return "", fmt.Errorf("error parsing template: %v", err)
+	}
+
+	templateData := a.extensionConfig.NTPConfig
+	var templateOutput strings.Builder
+
+	err = t.Execute(&templateOutput, templateData)
+	if err != nil {
+		return "", fmt.Errorf("error executing template: %v", err)
+	}
+
+	fmt.Println(templateOutput.String())
+
+	return templateOutput.String(), nil
+}
+
 func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
 		extensionUnits []extensionsv1alpha1.Unit
@@ -116,6 +150,22 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 		extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 	)
+
+	if a.extensionConfig.UseNTP != nil && *a.extensionConfig.UseNTP {
+		extensionUnits = append(extensionUnits,
+			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
+			extensionsv1alpha1.Unit{Name: "ntpd.service.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+		)
+		templateData, err := a.generateNTPConfig()
+		if err != nil {
+			return nil, nil, err
+		}
+		extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
+			Path:        filepath.Join("/", "etc", "ntp.conf"),
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: templateData}},
+			Permissions: ptr.To[int32](0644),
+		})
+	}
 
 	// blacklist sctp kernel module
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
