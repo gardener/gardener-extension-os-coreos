@@ -8,7 +8,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.0
 	github.com/spf13/cobra v1.8.1
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/tools v0.27.0
+	k8s.io/apimachinery v0.31.2
 	k8s.io/component-base v0.31.2
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
 	sigs.k8s.io/controller-runtime v0.19.1
@@ -84,7 +86,6 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -114,7 +115,6 @@ require (
 	istio.io/client-go v1.23.2 // indirect
 	k8s.io/api v0.31.2 // indirect
 	k8s.io/apiextensions-apiserver v0.31.2 // indirect
-	k8s.io/apimachinery v0.31.2 // indirect
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.1 // indirect
 	k8s.io/client-go v0.31.2 // indirect
 	k8s.io/code-generator v0.31.2 // indirect
