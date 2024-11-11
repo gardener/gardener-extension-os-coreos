@@ -18,6 +18,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
 
@@ -35,7 +36,8 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		mgr = test.FakeManager{Client: fakeClient}
-		actuator = NewActuator(mgr)
+		extensionConfig := Config{ExtensionConfig: &v1alpha1.ExtensionConfig{UseNTP: ptr.To(false)}}
+		actuator = NewActuator(mgr, extensionConfig)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
