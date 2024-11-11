@@ -44,6 +44,7 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
         - --gardener-version={{ .Values.gardener.version }}
+        - --config=/config/config.yaml
         - --metrics-bind-address=:{{ .Values.metrics.port }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
@@ -53,4 +54,12 @@ spec:
 {{- if .Values.resources }}
         resources:
 {{ toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+          - name: config
+            mountPath: /config/
+            readOnly: true
+      volumes:
+        secret:
+          secretName: {{ .Chart.Name }}-config
+          defaultMode: 420
 {{- end }}
