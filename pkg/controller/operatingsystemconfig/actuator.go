@@ -134,8 +134,6 @@ func (a *actuator) generateNTPConfig() (string, error) {
 		return "", fmt.Errorf("error executing template: %v", err)
 	}
 
-	fmt.Println(templateOutput.String())
-
 	return templateOutput.String(), nil
 }
 
