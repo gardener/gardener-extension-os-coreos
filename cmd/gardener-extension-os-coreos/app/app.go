@@ -34,6 +34,11 @@ func NewControllerCommand() *cobra.Command {
 			if err := options.optionAggregator.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %s", err)
 			}
+
+			if err := options.Validate(); err != nil {
+				return err
+			}
+
 			cmd.SilenceUsage = true
 			return options.run(cmd.Context())
 		},
@@ -42,6 +47,16 @@ func NewControllerCommand() *cobra.Command {
 	options.optionAggregator.AddFlags(cmd.Flags())
 
 	return cmd
+}
+
+func (o *Options) Validate() error {
+	if err := o.extensionOptions.Validate(); err != nil {
+		return err
+	}
+	if err := o.healthOptions.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *Options) run(ctx context.Context) error {
@@ -54,10 +69,6 @@ func (o *Options) run(ctx context.Context) error {
 	mgr, err := manager.New(o.restOptions.Completed().Config, o.managerOptions.Completed().Options())
 	if err != nil {
 		return fmt.Errorf("could not instantiate manager: %w", err)
-	}
-
-	if err := o.healthOptions.Validate(); err != nil {
-		return err
 	}
 
 	if err := controller.AddToScheme(mgr.GetScheme()); err != nil {
