@@ -145,6 +145,17 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 		})
 
 		Describe("#Reconcile", func() {
+			It("should enable ntpd service", func() {
+				extensionConfig := Config{
+					ExtensionConfig: &v1alpha1.ExtensionConfig{UseNTP: ptr.To(true),
+						NTPConfig: &v1alpha1.NTPConfig{NTPServers: []string{"foo.bar"}}},
+				}
+				actuator = NewActuator(mgr, extensionConfig)
+				userData, extensionUnits, _, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(userData).To(BeEmpty())
+				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
+			})
 			It("should not return an error", func() {
 				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
