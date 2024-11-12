@@ -154,7 +154,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 	if a.extensionConfig.UseNTP != nil && *a.extensionConfig.UseNTP {
 		extensionUnits = append(extensionUnits,
 			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-			extensionsv1alpha1.Unit{Name: "ntpd.service.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
 		)
 		templateData, err := a.generateNTPConfig()
 		if err != nil {
