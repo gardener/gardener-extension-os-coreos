@@ -165,12 +165,12 @@ ExecStartPre=/opt/bin/kubelet_cgroup_driver.sh
 				Expect(extensionFiles).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/modprobe.d/sctp.conf",
-						Permissions: ptr.To[int32](0644),
+						Permissions: ptr.To[uint32](0644),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/opt/bin/kubelet_cgroup_driver.sh",
-						Permissions: ptr.To[int32](0755),
+						Permissions: ptr.To[uint32](0755),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `#!/bin/bash
 
 KUBELET_CONFIG=/var/lib/kubelet/config/kubelet

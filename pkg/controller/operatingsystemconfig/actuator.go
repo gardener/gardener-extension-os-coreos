@@ -121,7 +121,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filepath.Join("/", "etc", "modprobe.d", "sctp.conf"),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
-		Permissions: ptr.To[int32](0644),
+		Permissions: ptr.To[uint32](0644),
 	})
 
 	// add scripts and dropins for kubelet cgroup driver configuration
@@ -129,7 +129,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filePathKubeletCGroupDriverScript,
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: cgroupsv2TemplateContent}},
-		Permissions: ptr.To[int32](0755),
+		Permissions: ptr.To[uint32](0755),
 	})
 	extensionUnits = append(extensionUnits, extensionsv1alpha1.Unit{
 		Name: "kubelet.service",
