@@ -54,6 +54,16 @@ func (o *ExtensionOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
+func (o *Options) Validate() error {
+	if err := o.extensionOptions.Validate(); err != nil {
+		return err
+	}
+	if err := o.healthOptions.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Complete implements Completer.Complete.
 func (o *ExtensionOptions) Complete() error {
 	if len(o.configFile) == 0 {

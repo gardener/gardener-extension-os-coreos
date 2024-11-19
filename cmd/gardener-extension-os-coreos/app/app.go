@@ -40,7 +40,7 @@ func NewControllerCommand() *cobra.Command {
 			}
 
 			cmd.SilenceUsage = true
-			return options.run(cmd.Context())
+			return run(cmd.Context(), options)
 		},
 	}
 
@@ -49,17 +49,7 @@ func NewControllerCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *Options) Validate() error {
-	if err := o.extensionOptions.Validate(); err != nil {
-		return err
-	}
-	if err := o.healthOptions.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *Options) run(ctx context.Context) error {
+func run(ctx context.Context, o *Options) error {
 	// TODO: Make these flags configurable via command line parameters or component config file.
 	util.ApplyClientConnectionConfigurationToRESTConfig(&componentbaseconfig.ClientConnectionConfiguration{
 		QPS:   100.0,
