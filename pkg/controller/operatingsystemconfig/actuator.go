@@ -159,7 +159,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 			return nil, nil, err
 		}
 		extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
-			Path:        filepath.Join("/", "etc", "ntp.conf"),
+			Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: templateData}},
 			Permissions: ptr.To[int32](0644),
 		})
