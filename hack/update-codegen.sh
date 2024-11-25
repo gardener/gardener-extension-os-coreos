@@ -11,11 +11,10 @@ PROJECT_ROOT="${SCRIPT_DIR}"/..
 
 # setup virtual GOPATH
 # k8s.io/code-generator does not work outside GOPATH, see https://github.com/kubernetes/kubernetes/issues/86753.
-source "$SCRIPT_DIR"/vgopath-setup.sh
+source "$GARDENER_HACK_DIR"/vgopath-setup.sh
 
 # fetch code-generator module to execute the scripts from the modcache (we don't vendor here)
 CODE_GENERATOR_DIR="$(go list -m -tags tools -f '{{ .Dir }}' k8s.io/code-generator)"
-
 
 # We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
 # see https://github.com/kubernetes/code-generator/issues/100.
@@ -24,5 +23,5 @@ export GO111MODULE=off
 source "${CODE_GENERATOR_DIR}/kube_codegen.sh"
 
 kube::codegen::gen_helpers \
---boilerplate "${SCRIPT_DIR}/boilerplate.go.txt" \
-"${PROJECT_ROOT}/pkg/"
+  --boilerplate "${GARDENER_HACK_DIR}/LICENSE_BOILERPLATE.txt" \
+  "${PROJECT_ROOT}/pkg/"

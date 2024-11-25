@@ -78,9 +78,9 @@ check: $(GOIMPORTS) $(GOLANGCI_LINT)
 	@REPO_ROOT=$(REPO_ROOT) bash $(GARDENER_HACK_DIR)/check-charts.sh ./charts
 
 .PHONY: generate
-generate: $(VGOPATH) $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(HELM) $(MOCKGEN) $(YQ)
+generate: $(VGOPATH) $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(HELM) $(MOCKGEN) $(YQ) $(VGOPATH)
 	@REPO_ROOT=$(REPO_ROOT) VGOPATH=$(VGOPATH) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) bash $(GARDENER_HACK_DIR)/generate-sequential.sh ./charts/... ./cmd/... ./pkg/...
-	@$(HACK_DIR)/update-codegen.sh
+	@VGOPATH=$(VGOPATH) REPO_ROOT=$(REPO_ROOT) $(HACK_DIR)/update-codegen.sh
 	$(MAKE) format
 
 .PHONY: format
