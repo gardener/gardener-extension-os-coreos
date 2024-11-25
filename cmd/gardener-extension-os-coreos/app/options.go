@@ -92,12 +92,6 @@ func (o *ExtensionOptions) Validate() error {
 
 // NewOptions creates a new Options instance.
 func NewOptions() *Options {
-	heartbeatCtrlOpts := &heartbeatcmd.Options{
-		ExtensionName:        Name,
-		RenewIntervalSeconds: 30,
-		Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
-	}
-
 	options := &Options{
 		generalOptions: &extensionscmdcontroller.GeneralOptions{},
 		restOptions:    &extensionscmdcontroller.RESTOptions{},
@@ -114,7 +108,11 @@ func NewOptions() *Options {
 			extensionscmdcontroller.Switch(osccontroller.ControllerName, operatingsystemconfig.AddToManager),
 			extensionscmdcontroller.Switch(heartbeat.ControllerName, heartbeat.AddToManager),
 		),
-		heartbeatOptions: heartbeatCtrlOpts,
+		heartbeatOptions: &heartbeatcmd.Options{
+			ExtensionName:        Name,
+			RenewIntervalSeconds: 30,
+			Namespace:            os.Getenv("LEADER_ELECTION_NAMESPACE"),
+		},
 		extensionOptions: &ExtensionOptions{},
 	}
 
@@ -140,4 +138,8 @@ func (o *Options) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (o *Options) Complete() error {
+	return o.optionAggregator.Complete()
 }
