@@ -65,11 +65,9 @@ func run(ctx context.Context, o *Options) error {
 		return fmt.Errorf("could not update manager scheme: %w", err)
 	}
 
-	ctrlConfig := o.extensionOptions.Completed()
-	ctrlConfig.Apply(&operatingsystemconfig.DefaultAddOptions.ExtensionConfig)
-
+	o.extensionOptions.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.ExtensionConfig)
 	o.controllerOptions.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.Controller)
-	o.healthOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
+	o.heartbeatOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
 
 	o.reconcileOptions.Completed().Apply(&operatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, ptr.To(extensionsv1alpha1.ExtensionClassShoot))
 

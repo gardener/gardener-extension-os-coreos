@@ -26,7 +26,7 @@ type Options struct {
 	restOptions        *extensionscmdcontroller.RESTOptions
 	managerOptions     *extensionscmdcontroller.ManagerOptions
 	controllerOptions  *extensionscmdcontroller.ControllerOptions
-	healthOptions      *heartbeatcmd.Options
+	heartbeatOptions   *heartbeatcmd.Options
 	controllerSwitches *extensionscmdcontroller.SwitchOptions
 	reconcileOptions   *extensionscmdcontroller.ReconcilerOptions
 	optionAggregator   extensionscmdcontroller.OptionAggregator
@@ -52,16 +52,6 @@ func init() {
 // AddFlags implements Flagger.AddFlags.
 func (o *ExtensionOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
-}
-
-func (o *Options) Validate() error {
-	if err := o.extensionOptions.Validate(); err != nil {
-		return err
-	}
-	if err := o.healthOptions.Validate(); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Complete implements Completer.Complete.
@@ -124,7 +114,7 @@ func NewOptions() *Options {
 			extensionscmdcontroller.Switch(osccontroller.ControllerName, operatingsystemconfig.AddToManager),
 			extensionscmdcontroller.Switch(heartbeat.ControllerName, heartbeat.AddToManager),
 		),
-		healthOptions:    heartbeatCtrlOpts,
+		heartbeatOptions: heartbeatCtrlOpts,
 		extensionOptions: &ExtensionOptions{},
 	}
 
@@ -134,10 +124,20 @@ func NewOptions() *Options {
 		options.managerOptions,
 		options.controllerOptions,
 		options.extensionOptions,
-		extensionscmdcontroller.PrefixOption("heartbeat-", options.healthOptions),
+		extensionscmdcontroller.PrefixOption("heartbeat-", options.heartbeatOptions),
 		options.controllerSwitches,
 		options.reconcileOptions,
 	)
 
 	return options
+}
+
+func (o *Options) Validate() error {
+	if err := o.extensionOptions.Validate(); err != nil {
+		return err
+	}
+	if err := o.heartbeatOptions.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
