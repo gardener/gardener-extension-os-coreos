@@ -5,6 +5,8 @@ image:
 
 resources: {}
 
+config: {}
+
 vpa:
   enabled: true
   resourcePolicy:

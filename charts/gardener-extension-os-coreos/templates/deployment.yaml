@@ -1,20 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gardener-extension-os-coreos
+  name: {{ include "coreos.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: gardener-extension-os-coreos
-    helm.sh/chart: gardener-extension-os-coreos
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "coreos.labels" . | nindent 4 }}
     high-availability-config.resources.gardener.cloud/type: controller
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: gardener-extension-os-coreos
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "coreos.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- if and .Values.metrics.enableScraping }}
@@ -25,8 +22,7 @@ spec:
         prometheus.io/port: "{{ .Values.metrics.port }}"
       {{- end }}
       labels:
-        app.kubernetes.io/name: gardener-extension-os-coreos
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "coreos.labels" . | nindent 8 }}
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
     spec:
@@ -57,11 +53,11 @@ spec:
 {{- end }}
         volumeMounts:
           - name: config
-            mountPath: /config/
+            mountPath: /config
             readOnly: true
       volumes:
         - name: config
           secret:
-            secretName: {{ .Chart.Name }}-config
+            secretName: {{ include "coreos.fullname" . }}-config
             defaultMode: 420
 

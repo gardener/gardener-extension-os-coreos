@@ -1,17 +1,15 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: gardener-extension-os-coreos
+  name: {{ include "coreos.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: gardener-extension-os-coreos
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "coreos.labels" . | nindent 4 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: gardener-extension-os-coreos
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "coreos.selectorLabels" . | nindent 6}}
 {{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
 {{- end }}
