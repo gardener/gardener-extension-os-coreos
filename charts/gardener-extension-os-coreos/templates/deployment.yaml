@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "coreos.fullname" . }}
+  name: {{ include "coreos.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "coreos.labels" . | nindent 4 }}
@@ -27,7 +27,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
     spec:
       priorityClassName: gardener-system-900
-      serviceAccountName: gardener-extension-os-coreos
+      serviceAccountName: {{ include "coreos.name" . }}
       containers:
       - name: gardener-extension-os-coreos
         image: {{ include "image" . }}
@@ -58,6 +58,6 @@ spec:
       volumes:
         - name: config
           secret:
-            secretName: {{ include "coreos.fullname" . }}-config
+            secretName: {{ include "coreos.name" . }}-config
             defaultMode: 420
 
