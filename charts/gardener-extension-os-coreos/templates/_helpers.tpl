@@ -58,3 +58,10 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
+
+{{/*
+Get checksum of config secret or configMap
+*/}}
+{{- define "coreos.configChecksum" -}}
+{{- include (print $.Template.BasePath "/secret-config.yaml") . | sha256sum -}}
+{{- end -}}

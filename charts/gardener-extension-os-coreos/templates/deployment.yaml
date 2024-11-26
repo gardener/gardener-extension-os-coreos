@@ -16,6 +16,7 @@ spec:
     metadata:
       {{- if and .Values.metrics.enableScraping }}
       annotations:
+        checksum/config: {{ include "coreos.configChecksum" . }}
         prometheus.io/name: "{{ .Release.Name }}"
         prometheus.io/scrape: "true"
         # default metrics endpoint in controller-runtime
