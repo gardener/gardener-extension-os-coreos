@@ -22,6 +22,14 @@ import (
 	configv1alpha1 "github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 )
 
+//go:embed templates/configure-cgroupsv2.sh.tpl
+var cgroupsv2TemplateContent string
+
+//go:embed templates/ntp-config.conf.tpl
+var ntpConfigTemplateContent string
+
+var ntpConfigTemplate *template.Template
+
 type actuator struct {
 	client          client.Client
 	extensionConfig Config
@@ -38,6 +46,14 @@ func NewActuator(mgr manager.Manager, extensionConfig Config) operatingsystemcon
 	return &actuator{
 		client:          mgr.GetClient(),
 		extensionConfig: extensionConfig,
+	}
+}
+
+func init() {
+	var err error
+	ntpConfigTemplate, err = template.New("ntp-config").Parse(ntpConfigTemplateContent)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse NTP config template: %w", err))
 	}
 }
 
@@ -114,22 +130,11 @@ systemctl enable docker && systemctl restart docker
 	return script, nil
 }
 
-//go:embed templates/configure-cgroupsv2.sh.tpl
-var cgroupsv2TemplateContent string
-
-//go:embed templates/ntp-config.conf.tpl
-var NTPConfigTemplateContent string
-
 func (a *actuator) generateNTPConfig() (string, error) {
-	t, err := template.New("ntp-config").Parse(NTPConfigTemplateContent)
-	if err != nil {
-		return "", fmt.Errorf("error parsing template: %v", err)
-	}
-
-	templateData := a.extensionConfig.NTPConfig
+	templateData := a.extensionConfig.NTP.NTPD
 	var templateOutput strings.Builder
 
-	err = t.Execute(&templateOutput, templateData)
+	err := ntpConfigTemplate.Execute(&templateOutput, templateData)
 	if err != nil {
 		return "", fmt.Errorf("error executing template: %v", err)
 	}
@@ -149,20 +154,9 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 	)
 
-	if a.extensionConfig.UseNTP != nil && *a.extensionConfig.UseNTP {
-		extensionUnits = append(extensionUnits,
-			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
-		)
-		templateData, err := a.generateNTPConfig()
-		if err != nil {
-			return nil, nil, err
-		}
-		extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
-			Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
-			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: templateData}},
-			Permissions: ptr.To[uint32](0644),
-		})
+	var err error
+	if extensionUnits, extensionFiles, err = a.configureNTPDaemon(extensionUnits, extensionFiles); err != nil {
+		return nil, nil, fmt.Errorf("error configuring NTP Daemon: %v", err)
 	}
 
 	// blacklist sctp kernel module
@@ -189,6 +183,35 @@ ExecStartPre=` + filePathKubeletCGroupDriverScript + `
 		}},
 		FilePaths: []string{filePathKubeletCGroupDriverScript},
 	})
+
+	return extensionUnits, extensionFiles, nil
+}
+
+// configureNTPDaemon configures the VM either with systemd-timesyncd or ntpd as the time syncing client
+func (a *actuator) configureNTPDaemon(extensionUnits []extensionsv1alpha1.Unit, extensionFiles []extensionsv1alpha1.File) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	switch a.extensionConfig.NTP.Daemon {
+	case configv1alpha1.SystemdTimesyncd:
+		extensionUnits = append(extensionUnits,
+			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
+		)
+	case configv1alpha1.NTPD:
+		extensionUnits = append(extensionUnits,
+			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
+			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+		)
+		templateData, err := a.generateNTPConfig()
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating NTP config: %v", err)
+		}
+		extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
+			Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: templateData}},
+			Permissions: ptr.To[uint32](0644),
+		})
+	default:
+		return nil, nil, fmt.Errorf("unsupported NTP daemon: %s", a.extensionConfig.NTP.Daemon)
+	}
 
 	return extensionUnits, extensionFiles, nil
 }
