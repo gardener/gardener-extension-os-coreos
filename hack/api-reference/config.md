@@ -42,7 +42,7 @@ NTPConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>NTPConfig to configure either systemd-timesyncd or ntpd</p>
+<p>NTP to configure either systemd-timesyncd or ntpd</p>
 </td>
 </tr>
 </tbody>
@@ -88,7 +88,7 @@ NTPDConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>NTPDConfig to configure the ntpd client</p>
+<p>NTPD to configure the ntpd client</p>
 </td>
 </tr>
 </tbody>
