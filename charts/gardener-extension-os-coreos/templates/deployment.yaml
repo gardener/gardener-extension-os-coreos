@@ -1,37 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gardener-extension-os-coreos
+  name: {{ include "coreos.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: gardener-extension-os-coreos
-    helm.sh/chart: gardener-extension-os-coreos
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "coreos.labels" . | nindent 4 }}
     high-availability-config.resources.gardener.cloud/type: controller
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: gardener-extension-os-coreos
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "coreos.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- if and .Values.metrics.enableScraping }}
       annotations:
+        checksum/config: {{ include "coreos.configChecksum" . }}
         prometheus.io/name: "{{ .Release.Name }}"
         prometheus.io/scrape: "true"
         # default metrics endpoint in controller-runtime
         prometheus.io/port: "{{ .Values.metrics.port }}"
       {{- end }}
       labels:
-        app.kubernetes.io/name: gardener-extension-os-coreos
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "coreos.labels" . | nindent 8 }}
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
     spec:
       priorityClassName: gardener-system-900
-      serviceAccountName: gardener-extension-os-coreos
+      serviceAccountName: {{ include "coreos.name" . }}
       containers:
       - name: gardener-extension-os-coreos
         image: {{ include "image" . }}
@@ -44,6 +41,7 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
         - --gardener-version={{ .Values.gardener.version }}
+        - --config=/config/config.yaml
         - --metrics-bind-address=:{{ .Values.metrics.port }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
@@ -54,3 +52,13 @@ spec:
         resources:
 {{ toYaml .Values.resources | nindent 10 }}
 {{- end }}
+        volumeMounts:
+          - name: config
+            mountPath: /config
+            readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "coreos.name" . }}-config
+            defaultMode: 420
+

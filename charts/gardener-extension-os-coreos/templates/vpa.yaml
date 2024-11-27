@@ -2,8 +2,10 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ include "name" . }}-vpa
+  name: {{ include "coreos.name" . }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "coreos.labels" . | nindent 4 }}
 spec:
   {{- if .Values.vpa.resourcePolicy }}
   resourcePolicy:
@@ -15,7 +17,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "name" . }}
+    name: {{ include "coreos.name" . }}
   updatePolicy:
     updateMode: {{ .Values.vpa.updatePolicy.updateMode }}
 {{- end }}

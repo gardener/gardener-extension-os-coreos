@@ -6,6 +6,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -18,6 +19,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
 
@@ -35,7 +37,12 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 		mgr = test.FakeManager{Client: fakeClient}
-		actuator = NewActuator(mgr)
+		extensionConfig := Config{ExtensionConfig: &v1alpha1.ExtensionConfig{
+			NTP: &v1alpha1.NTPConfig{
+				Daemon: v1alpha1.SystemdTimesyncd,
+			},
+		}}
+		actuator = NewActuator(mgr, extensionConfig)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -143,12 +150,48 @@ systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
 		})
 
 		Describe("#Reconcile", func() {
+			It("should enable ntpd service", func() {
+				extensionConfig := Config{
+					ExtensionConfig: &v1alpha1.ExtensionConfig{
+						NTP: &v1alpha1.NTPConfig{
+							Daemon: v1alpha1.NTPD,
+							NTPD: &v1alpha1.NTPDConfig{
+								Servers: []string{"foo.bar", "bar.foo"},
+							},
+						},
+					},
+				}
+				actuator = NewActuator(mgr, extensionConfig)
+				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+				// TODO: userData always empty here anyway
+				Expect(userData).To(BeEmpty())
+				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
+				Expect(extensionFiles).To(ContainElement(extensionsv1alpha1.File{
+					Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
+					Permissions: ptr.To[uint32](0644),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Data: `
+server foo.bar iburst
+server bar.foo iburst
+
+driftfile /var/lib/ntp/ntp.drift
+restrict default nomodify nopeer noquery notrap limited kod
+restrict 127.0.0.1
+restrict [::1]`,
+						},
+					},
+				}))
+			})
 			It("should not return an error", func() {
 				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(userData).To(BeEmpty())
 				Expect(extensionUnits).To(ConsistOf(
+					extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+					extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 					extensionsv1alpha1.Unit{

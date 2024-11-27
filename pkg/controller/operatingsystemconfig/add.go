@@ -19,6 +19,8 @@ var DefaultAddOptions = AddOptions{}
 type AddOptions struct {
 	// Controller are the controller related options.
 	Controller controller.Options
+	// ExtensionConfig contains configuration for the extension service
+	ExtensionConfig Config
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
 }
@@ -27,7 +29,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
-		Actuator:          NewActuator(mgr),
+		Actuator:          NewActuator(mgr, opts.ExtensionConfig),
 		ControllerOptions: opts.Controller,
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Types:             []string{"coreos", "flatcar"},
