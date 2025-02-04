@@ -109,7 +109,9 @@ mkdir -p /etc/systemd/system/containerd.service.d
 cat <<EOF > /etc/systemd/system/containerd.service.d/11-exec_config.conf
 [Service]
 ExecStart=
-ExecStart=/usr/bin/containerd --config /etc/containerd/config.toml
+# try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
+# TODO: Remove torxc once flatcar LTS support has run out.
+ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'
 EOF
 chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
 ` + writeFilesToDiskScript + `
@@ -189,7 +191,7 @@ ExecStartPre=` + filePathKubeletCGroupDriverScript + `
 				Name: "11-exec_config.conf",
 				Content: `[Service]
 ExecStart=
-ExecStart=/usr/bin/containerd --config /etc/containerd/config.toml`,
+ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'`,
 			},
 		},
 	})
