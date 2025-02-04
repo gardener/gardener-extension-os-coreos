@@ -28,6 +28,9 @@ var cgroupsv2TemplateContent string
 //go:embed templates/ntp-config.conf.tpl
 var ntpConfigTemplateContent string
 
+//go:embed templates/11-exec_config.conf
+var customContainerdServiceOverride string
+
 var ntpConfigTemplate *template.Template
 
 type actuator struct {
@@ -104,14 +107,10 @@ if [ ! -s /etc/containerd/config.toml ]; then
   containerd config default > /etc/containerd/config.toml
   chmod 0644 /etc/containerd/config.toml
 fi
+
 mkdir -p /etc/systemd/system/containerd.service.d
 cat <<EOF > /etc/systemd/system/containerd.service.d/11-exec_config.conf
-# TODO(MichaelEischer): remove this file once all flatcar versions that use torcx,
-# that is before 3815.2.0, have run out of support
-[Service]
-ExecStart=
-# try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
-ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'
+` + customContainerdServiceOverride + `
 EOF
 chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
 ` + writeFilesToDiskScript + `
@@ -182,6 +181,15 @@ ExecStartPre=` + filePathKubeletCGroupDriverScript + `
 `,
 		}},
 		FilePaths: []string{filePathKubeletCGroupDriverScript},
+	})
+	extensionUnits = append(extensionUnits, extensionsv1alpha1.Unit{
+		Name: "containerd.service",
+		DropIns: []extensionsv1alpha1.DropIn{
+			{
+				Name:    "11-exec_config.conf",
+				Content: customContainerdServiceOverride,
+			},
+		},
 	})
 
 	return extensionUnits, extensionFiles, nil
