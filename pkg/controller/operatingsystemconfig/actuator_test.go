@@ -60,13 +60,13 @@ if [ ! -s /etc/containerd/config.toml ]; then
   containerd config default > /etc/containerd/config.toml
   chmod 0644 /etc/containerd/config.toml
 fi
+
 mkdir -p /etc/systemd/system/containerd.service.d
 cat <<EOF > /etc/systemd/system/containerd.service.d/11-exec_config.conf
-# TODO(MichaelEischer): remove this file once all flatcar versions that use torcx,
-# that is before 3815.2.0, have run out of support
 [Service]
 ExecStart=
 # try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
+# TODO: Remove torxc once flatcar LTS support has run out.
 ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'
 EOF
 chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
@@ -203,6 +203,19 @@ ExecStartPre=/opt/bin/kubelet_cgroup_driver.sh
 `,
 						}},
 						FilePaths: []string{"/opt/bin/kubelet_cgroup_driver.sh"},
+					},
+					extensionsv1alpha1.Unit{
+						Name: "containerd.service",
+						DropIns: []extensionsv1alpha1.DropIn{
+							{
+								Name: "11-exec_config.conf",
+								Content: `[Service]
+ExecStart=
+# try to use containerd provided via torcx, but also falls back to /usr/bin/containerd provided via systemd-sysext
+# TODO: Remove torxc once flatcar LTS support has run out.
+ExecStart=/bin/bash -c 'PATH="/run/torcx/unpack/docker/bin:$PATH" containerd --config /etc/containerd/config.toml'`,
+							},
+						},
 					},
 				))
 				Expect(extensionFiles).To(ConsistOf(
