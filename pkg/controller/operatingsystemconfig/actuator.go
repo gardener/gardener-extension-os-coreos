@@ -126,6 +126,9 @@ systemctl enable docker && systemctl restart docker
 `, unit.Name, unit.Name)
 	}
 
+	// The provisioning script must run only once.
+	script = operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script)
+
 	return script, nil
 }
 
