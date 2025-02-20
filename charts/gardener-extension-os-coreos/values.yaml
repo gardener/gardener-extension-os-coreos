@@ -1,5 +1,5 @@
 image:
-  repository: eu.gcr.io/gardener-project/gardener/extensions/os-coreos
+  repository: europe-docker.pkg.dev/gardener-project/releases/extensions/os-coreos
   tag: latest
   pullPolicy: IfNotPresent
 
