@@ -143,12 +143,13 @@ touch /var/lib/osc/provision-osc-applied
 
 		Describe("#Reconcile", func() {
 			It("should not return an error", func() {
-				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				userData, extensionUnits, extensionFiles, inplaceUpdateStatus, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(userData)).To(Equal(expectedUserData))
 				Expect(extensionUnits).To(BeEmpty())
 				Expect(extensionFiles).To(BeEmpty())
+				Expect(inplaceUpdateStatus).To(BeNil())
 			})
 		})
 	})
@@ -171,7 +172,7 @@ touch /var/lib/osc/provision-osc-applied
 					},
 				}
 				actuator = NewActuator(mgr, extensionConfig)
-				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				userData, extensionUnits, extensionFiles, _, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 				// TODO: userData always empty here anyway
 				Expect(userData).To(BeEmpty())
@@ -194,7 +195,7 @@ restrict [::1]`,
 				}))
 			})
 			It("should not return an error", func() {
-				userData, extensionUnits, extensionFiles, err := actuator.Reconcile(ctx, log, osc)
+				userData, extensionUnits, extensionFiles, _, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(userData).To(BeEmpty())
