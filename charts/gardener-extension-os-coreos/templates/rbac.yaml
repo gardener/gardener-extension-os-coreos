@@ -58,8 +58,8 @@ rules:
   resources:
   - leases
   verbs:
-   - create 
-   - list 
+   - create
+   - list
    - watch
 - apiGroups:
   - coordination.k8s.io
@@ -70,6 +70,7 @@ rules:
   - gardener-extension-heartbeat
   verbs:
   - get
+  - patch
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
