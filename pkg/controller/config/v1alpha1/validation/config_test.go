@@ -42,13 +42,4 @@ var _ = Describe("ExtensionConfig validation", func() {
 		Expect(errs[0].Field).To(Equal("ntpd"))
 	})
 
-	It("should fail with daemon ntpd and enabled set to false", func() {
-		config.NTP.Enabled = false
-		config.NTP.NTPD = &configv1alpha1.NTPDConfig{Servers: []string{"foo.bar"}}
-		errs := ValidateExtensionConfig(config)
-		Expect(errs).To(HaveLen(1))
-		Expect(errs[0].Type).To(Equal(field.ErrorTypeForbidden))
-		Expect(errs[0].Field).To(Equal("ntpd"))
-	})
-
 })

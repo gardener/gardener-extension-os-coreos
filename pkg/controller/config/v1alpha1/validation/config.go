@@ -20,7 +20,7 @@ func ValidateExtensionConfig(config *configv1alpha1.ExtensionConfig) field.Error
 		}
 
 		// Check if user configured systemd-timesyncd daemon with ntpd config
-		if config.NTP.Daemon == configv1alpha1.SystemdTimesyncd && config.NTP.NTPD != nil {
+		if config.NTP.Daemon != configv1alpha1.NTPD && config.NTP.NTPD != nil {
 			allErrs = append(allErrs, field.Forbidden(rootPath.Child("ntpd"), "NTP daemon not allowed in systemd config"))
 		}
 
