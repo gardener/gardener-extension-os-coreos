@@ -5,6 +5,7 @@
 package operatingsystemconfig_test
 
 import (
+	"bytes"
 	"context"
 	"path/filepath"
 
@@ -14,12 +15,16 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
+	configv1alpha1 "github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
 
@@ -30,19 +35,27 @@ var _ = Describe("Actuator", func() {
 		fakeClient client.Client
 		mgr        manager.Manager
 
-		osc      *extensionsv1alpha1.OperatingSystemConfig
-		actuator operatingsystemconfig.Actuator
+		osc                   *extensionsv1alpha1.OperatingSystemConfig
+		actuator              operatingsystemconfig.Actuator
+		globalExtensionConfig *configv1alpha1.ExtensionConfig
+		scheme                = runtime.NewScheme()
+		encoder               runtime.Encoder
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
+		runtimeutils.Must(configv1alpha1.AddToScheme(scheme))
+		encoder = serializer.NewCodecFactory(scheme).EncoderForVersion(&json.Serializer{}, configv1alpha1.SchemeGroupVersion)
 		mgr = test.FakeManager{Client: fakeClient}
-		extensionConfig := Config{ExtensionConfig: &v1alpha1.ExtensionConfig{
-			NTP: &v1alpha1.NTPConfig{
-				Enabled: ptr.To(true),
-				Daemon:  v1alpha1.SystemdTimesyncd,
+		extensionConfig := Config{
+			ExtensionConfig: &configv1alpha1.ExtensionConfig{
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon: configv1alpha1.SystemdTimesyncd,
+				},
 			},
-		}}
+		}
+		globalExtensionConfig = extensionConfig.ExtensionConfig
 		actuator = NewActuator(mgr, extensionConfig)
 
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
@@ -161,10 +174,33 @@ touch /var/lib/osc/provision-osc-applied
 		})
 
 		Describe("#Reconcile", func() {
+			It("should override global defaults on a shoot by shoot basis and enable ntpd for that shoot", func() {
+				// Shoot specific override via providerConfig
+				providerConfigData := configv1alpha1.ExtensionConfig{
+					NTP: &configv1alpha1.NTPConfig{
+						Daemon: configv1alpha1.NTPD,
+						NTPD: &configv1alpha1.NTPDConfig{
+							Servers: []string{"foo.bar", "bar.foo"},
+						},
+					},
+				}
+				providerConfigBuffer := new(bytes.Buffer)
+				err := encoder.Encode(&providerConfigData, providerConfigBuffer)
+				osc.Spec.ProviderConfig = &runtime.RawExtension{Raw: providerConfigBuffer.Bytes()}
+				defer DeferCleanup(func() {
+					osc.Spec.ProviderConfig = nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+				userData, extensionUnits, _, _, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(userData).To(BeEmpty())
+				Expect(providerConfigData).To(Not(Equal(*globalExtensionConfig)))
+				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
+			})
 			It("should not enable any timesync service when Daemon is None", func() {
 				extensionConfig := Config{
-					ExtensionConfig: &v1alpha1.ExtensionConfig{
-						NTP: &v1alpha1.NTPConfig{
+					ExtensionConfig: &configv1alpha1.ExtensionConfig{
+						NTP: &configv1alpha1.NTPConfig{
 							Enabled: ptr.To(false),
 						},
 					},
@@ -180,11 +216,11 @@ touch /var/lib/osc/provision-osc-applied
 			})
 			It("should enable ntpd service", func() {
 				extensionConfig := Config{
-					ExtensionConfig: &v1alpha1.ExtensionConfig{
-						NTP: &v1alpha1.NTPConfig{
-							Daemon:  v1alpha1.NTPD,
+					ExtensionConfig: &configv1alpha1.ExtensionConfig{
+						NTP: &configv1alpha1.NTPConfig{
+							Daemon: configv1alpha1.NTPD,
 							Enabled: ptr.To(true),
-							NTPD: &v1alpha1.NTPDConfig{
+							NTPD: &configv1alpha1.NTPDConfig{
 								Servers: []string{"foo.bar", "bar.foo"},
 							},
 						},

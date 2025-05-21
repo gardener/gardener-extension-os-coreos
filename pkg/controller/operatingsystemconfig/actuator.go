@@ -15,6 +15,9 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -52,15 +55,43 @@ func NewActuator(mgr manager.Manager, extensionConfig Config) operatingsystemcon
 	}
 }
 
+var decoder runtime.Decoder
+
 func init() {
 	var err error
+	scheme := runtime.NewScheme()
+	runtimeutils.Must(configv1alpha1.AddToScheme(scheme))
+	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 	ntpConfigTemplate, err = template.New("ntp-config").Parse(ntpConfigTemplateContent)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse NTP config template: %w", err))
 	}
 }
 
+func GetProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
+	if osc.Spec.ProviderConfig == nil {
+		return nil, nil
+	}
+
+	obj := &configv1alpha1.ExtensionConfig{}
+	if _, _, err := decoder.Decode(osc.Spec.ProviderConfig.Raw, nil, obj); err != nil {
+		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
+	}
+
+	return obj, nil
+}
+
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) ([]byte, []extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
+	// Try to load dynamic .spec.providerConfig in OSC
+	config, err := GetProviderConfiguration(osc)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if config != nil {
+		//Overwrite shoot-specific ExtensionConfig with global ExtensionConfig
+		a.extensionConfig.ExtensionConfig = config
+	}
+
 	switch purpose := osc.Spec.Purpose; purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
 		userData, err := a.handleProvisionOSC(ctx, osc)
