@@ -66,6 +66,17 @@ NTPConfig
 <tbody>
 <tr>
 <td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled Optionally disable or enable the extension to configure a timesync service for the machine</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>daemon</code></br>
 <em>
 <a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.Daemon">

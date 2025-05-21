@@ -148,6 +148,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 	var (
 		extensionUnits []extensionsv1alpha1.Unit
 		extensionFiles []extensionsv1alpha1.File
+		err            error
 	)
 
 	// disable automatic updates
@@ -156,9 +157,10 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 	)
 
-	var err error
-	if extensionUnits, extensionFiles, err = a.configureNTPDaemon(extensionUnits, extensionFiles); err != nil {
-		return nil, nil, fmt.Errorf("error configuring NTP Daemon: %v", err)
+	if a.extensionConfig.NTP.Enabled {
+		if extensionUnits, extensionFiles, err = a.configureNTPDaemon(extensionUnits, extensionFiles); err != nil {
+			return nil, nil, fmt.Errorf("error configuring NTP Daemon: %v", err)
+		}
 	}
 
 	// blacklist sctp kernel module
