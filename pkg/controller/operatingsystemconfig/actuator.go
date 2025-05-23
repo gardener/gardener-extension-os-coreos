@@ -157,7 +157,7 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 	)
 
-	if a.extensionConfig.NTP.Enabled {
+	if ptr.Deref(a.extensionConfig.NTP.Enabled, true) {
 		if extensionUnits, extensionFiles, err = a.configureNTPDaemon(extensionUnits, extensionFiles); err != nil {
 			return nil, nil, fmt.Errorf("error configuring NTP Daemon: %v", err)
 		}

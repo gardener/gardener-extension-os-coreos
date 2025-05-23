@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -17,6 +18,8 @@ func SetDefaults_ExtensionConfig(obj *ExtensionConfig) {
 func SetDefaults_NTPConfig(obj *NTPConfig) {
 	if obj.Daemon == "" {
 		obj.Daemon = SystemdTimesyncd
-		obj.Enabled = true
+	}
+	if obj.Enabled == nil {
+		obj.Enabled = ptr.To(true)
 	}
 }

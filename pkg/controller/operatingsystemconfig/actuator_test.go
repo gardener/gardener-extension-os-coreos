@@ -39,7 +39,7 @@ var _ = Describe("Actuator", func() {
 		mgr = test.FakeManager{Client: fakeClient}
 		extensionConfig := Config{ExtensionConfig: &v1alpha1.ExtensionConfig{
 			NTP: &v1alpha1.NTPConfig{
-				Enabled: true,
+				Enabled: ptr.To(true),
 				Daemon:  v1alpha1.SystemdTimesyncd,
 			},
 		}}
@@ -165,7 +165,7 @@ touch /var/lib/osc/provision-osc-applied
 				extensionConfig := Config{
 					ExtensionConfig: &v1alpha1.ExtensionConfig{
 						NTP: &v1alpha1.NTPConfig{
-							Enabled: false,
+							Enabled: ptr.To(false),
 						},
 					},
 				}
@@ -183,7 +183,7 @@ touch /var/lib/osc/provision-osc-applied
 					ExtensionConfig: &v1alpha1.ExtensionConfig{
 						NTP: &v1alpha1.NTPConfig{
 							Daemon:  v1alpha1.NTPD,
-							Enabled: true,
+							Enabled: ptr.To(true),
 							NTPD: &v1alpha1.NTPDConfig{
 								Servers: []string{"foo.bar", "bar.foo"},
 							},
