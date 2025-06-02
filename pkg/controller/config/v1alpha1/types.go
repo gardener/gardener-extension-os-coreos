@@ -23,6 +23,8 @@ type ExtensionConfig struct {
 
 // NTPConfig General NTP Config for either systemd-timesyncd or ntpd
 type NTPConfig struct {
+	// Enabled Optionally disable or enable the extension to configure a timesync service for the machine
+	Enabled *bool `json:"enabled,omitempty"`
 	// Daemon One of either systemd-timesyncd or ntp
 	Daemon Daemon `json:"daemon"`
 	// NTPD to configure the ntpd client

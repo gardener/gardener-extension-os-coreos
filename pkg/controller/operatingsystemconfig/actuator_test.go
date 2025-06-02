@@ -39,7 +39,8 @@ var _ = Describe("Actuator", func() {
 		mgr = test.FakeManager{Client: fakeClient}
 		extensionConfig := Config{ExtensionConfig: &v1alpha1.ExtensionConfig{
 			NTP: &v1alpha1.NTPConfig{
-				Daemon: v1alpha1.SystemdTimesyncd,
+				Enabled: ptr.To(true),
+				Daemon:  v1alpha1.SystemdTimesyncd,
 			},
 		}}
 		actuator = NewActuator(mgr, extensionConfig)
@@ -160,11 +161,29 @@ touch /var/lib/osc/provision-osc-applied
 		})
 
 		Describe("#Reconcile", func() {
+			It("should not enable any timesync service when Daemon is None", func() {
+				extensionConfig := Config{
+					ExtensionConfig: &v1alpha1.ExtensionConfig{
+						NTP: &v1alpha1.NTPConfig{
+							Enabled: ptr.To(false),
+						},
+					},
+				}
+				actuator = NewActuator(mgr, extensionConfig)
+				userData, extensionUnits, _, _, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(userData).To(BeEmpty())
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
+			})
 			It("should enable ntpd service", func() {
 				extensionConfig := Config{
 					ExtensionConfig: &v1alpha1.ExtensionConfig{
 						NTP: &v1alpha1.NTPConfig{
-							Daemon: v1alpha1.NTPD,
+							Daemon:  v1alpha1.NTPD,
+							Enabled: ptr.To(true),
 							NTPD: &v1alpha1.NTPDConfig{
 								Servers: []string{"foo.bar", "bar.foo"},
 							},
@@ -174,7 +193,6 @@ touch /var/lib/osc/provision-osc-applied
 				actuator = NewActuator(mgr, extensionConfig)
 				userData, extensionUnits, extensionFiles, _, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
-				// TODO: userData always empty here anyway
 				Expect(userData).To(BeEmpty())
 				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
 				Expect(extensionFiles).To(ContainElement(extensionsv1alpha1.File{
