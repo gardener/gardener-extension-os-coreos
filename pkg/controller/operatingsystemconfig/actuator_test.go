@@ -198,6 +198,27 @@ touch /var/lib/osc/provision-osc-applied
 				Expect(providerConfigData).To(Not(Equal(*globalExtensionConfig)))
 				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
 			})
+			It("should override global default with nothing", func() {
+				providerConfigData := configv1alpha1.ExtensionConfig{
+					NTP: &configv1alpha1.NTPConfig{
+						Enabled: ptr.To(false),
+					},
+				}
+				providerConfigBuffer := new(bytes.Buffer)
+				err := encoder.Encode(&providerConfigData, providerConfigBuffer)
+				osc.Spec.ProviderConfig = &runtime.RawExtension{Raw: providerConfigBuffer.Bytes()}
+				defer DeferCleanup(func() {
+					osc.Spec.ProviderConfig = nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+				userData, extensionUnits, _, _, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(userData).To(BeEmpty())
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
+				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
+			})
 			It("should not enable any timesync service when Daemon is None", func() {
 				extensionConfig := Config{
 					ExtensionConfig: &configv1alpha1.ExtensionConfig{
