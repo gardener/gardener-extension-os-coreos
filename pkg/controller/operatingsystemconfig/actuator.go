@@ -35,6 +35,7 @@ var ntpConfigTemplateContent string
 var customContainerdServiceOverride string
 
 var ntpConfigTemplate *template.Template
+var decoder runtime.Decoder
 
 type actuator struct {
 	client          client.Client
@@ -54,8 +55,6 @@ func NewActuator(mgr manager.Manager, extensionConfig Config) operatingsystemcon
 		extensionConfig: extensionConfig,
 	}
 }
-
-var decoder runtime.Decoder
 
 func init() {
 	var err error
