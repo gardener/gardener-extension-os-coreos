@@ -51,7 +51,7 @@ var _ = Describe("Actuator", func() {
 			ExtensionConfig: &configv1alpha1.ExtensionConfig{
 				NTP: &configv1alpha1.NTPConfig{
 					Enabled: ptr.To(true),
-					Daemon: configv1alpha1.SystemdTimesyncd,
+					Daemon:  configv1alpha1.SystemdTimesyncd,
 				},
 			},
 		}
@@ -178,7 +178,8 @@ touch /var/lib/osc/provision-osc-applied
 				// Shoot specific override via providerConfig
 				providerConfigData := configv1alpha1.ExtensionConfig{
 					NTP: &configv1alpha1.NTPConfig{
-						Daemon: configv1alpha1.NTPD,
+						Daemon:  configv1alpha1.NTPD,
+						Enabled: ptr.To(true),
 						NTPD: &configv1alpha1.NTPDConfig{
 							Servers: []string{"foo.bar", "bar.foo"},
 						},
@@ -218,8 +219,8 @@ touch /var/lib/osc/provision-osc-applied
 				extensionConfig := Config{
 					ExtensionConfig: &configv1alpha1.ExtensionConfig{
 						NTP: &configv1alpha1.NTPConfig{
-							Daemon: configv1alpha1.NTPD,
 							Enabled: ptr.To(true),
+							Daemon:  configv1alpha1.NTPD,
 							NTPD: &configv1alpha1.NTPDConfig{
 								Servers: []string{"foo.bar", "bar.foo"},
 							},
