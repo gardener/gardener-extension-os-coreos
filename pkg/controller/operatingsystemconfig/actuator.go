@@ -211,7 +211,7 @@ func (a *actuator) configureNTPDaemon(extensionUnits []extensionsv1alpha1.Unit, 
 	case configv1alpha1.NTPD:
 		extensionUnits = append(extensionUnits,
 			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
+			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true), FilePaths: []string{filepath.Join(string(filepath.Separator), "etc", "ntp.conf")}},
 		)
 		templateData, err := a.generateNTPConfig()
 		if err != nil {
