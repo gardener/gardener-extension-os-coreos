@@ -194,7 +194,7 @@ touch /var/lib/osc/provision-osc-applied
 				userData, extensionUnits, extensionFiles, _, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(userData).To(BeEmpty())
-				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
+				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true), FilePaths: []string{filepath.Join(string(filepath.Separator), "etc", "ntp.conf")}}))
 				Expect(extensionFiles).To(ContainElement(extensionsv1alpha1.File{
 					Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
 					Permissions: ptr.To[uint32](0644),
