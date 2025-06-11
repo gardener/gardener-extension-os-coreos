@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"dario.cat/mergo"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -67,28 +68,33 @@ func init() {
 	}
 }
 
-func GetProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
-	if osc.Spec.ProviderConfig == nil {
-		return nil, nil
-	}
-
+func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
 	obj := &configv1alpha1.ExtensionConfig{}
 	if _, _, err := decoder.Decode(osc.Spec.ProviderConfig.Raw, nil, obj); err != nil {
 		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
 	}
 
-	return obj, nil
+	config := a.extensionConfig.DeepCopy()
+	if err := mergo.Merge(config, obj, mergo.WithOverwriteWithEmptyValue); err != nil {
+		return nil, fmt.Errorf("failed to merge extension config with provider config: %w", err)
+	}
+
+	return config, nil
 }
 
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) ([]byte, []extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
-	// Try to load dynamic .spec.providerConfig in OSC
-	config, err := GetProviderConfiguration(osc)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-	if config != nil {
-		//Overwrite shoot-specific ExtensionConfig with global ExtensionConfig
-		a.extensionConfig.ExtensionConfig = config
+	var config *configv1alpha1.ExtensionConfig
+	var err error
+
+	// Check if the shoot provider configuration is provided. If yes, merge it with the default configuration from the extension.
+	if osc.Spec.ProviderConfig != nil {
+		config, err = a.GetAndMergeProviderConfiguration(osc)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	} else {
+		// If no shoot provider configuration is provided, use the default configuration from the extension.
+		config = a.extensionConfig.ExtensionConfig
 	}
 
 	switch purpose := osc.Spec.Purpose; purpose {
@@ -97,7 +103,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		extensionUnits, extensionFiles, err := a.handleReconcileOSC(osc)
+		extensionUnits, extensionFiles, err := a.handleReconcileOSC(config, osc)
 		return nil, extensionUnits, extensionFiles, nil, err
 
 	default:
@@ -162,8 +168,8 @@ systemctl enable docker && systemctl restart docker
 	return script, nil
 }
 
-func (a *actuator) generateNTPConfig() (string, error) {
-	templateData := a.extensionConfig.NTP.NTPD
+func (a *actuator) generateNTPConfig(config *configv1alpha1.ExtensionConfig) (string, error) {
+	templateData := config.NTP.NTPD
 	var templateOutput strings.Builder
 
 	err := ntpConfigTemplate.Execute(&templateOutput, templateData)
@@ -174,7 +180,7 @@ func (a *actuator) generateNTPConfig() (string, error) {
 	return templateOutput.String(), nil
 }
 
-func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+func (a *actuator) handleReconcileOSC(config *configv1alpha1.ExtensionConfig, _ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var (
 		extensionUnits []extensionsv1alpha1.Unit
 		extensionFiles []extensionsv1alpha1.File
@@ -187,8 +193,8 @@ func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfi
 		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 	)
 
-	if ptr.Deref(a.extensionConfig.NTP.Enabled, true) {
-		if extensionUnits, extensionFiles, err = a.configureNTPDaemon(extensionUnits, extensionFiles); err != nil {
+	if ptr.Deref(config.NTP.Enabled, true) {
+		if extensionUnits, extensionFiles, err = a.configureNTPDaemon(config, extensionUnits, extensionFiles); err != nil {
 			return nil, nil, fmt.Errorf("error configuring NTP Daemon: %v", err)
 		}
 	}
@@ -231,8 +237,8 @@ ExecStartPre=` + filePathKubeletCGroupDriverScript + `
 }
 
 // configureNTPDaemon configures the VM either with systemd-timesyncd or ntpd as the time syncing client
-func (a *actuator) configureNTPDaemon(extensionUnits []extensionsv1alpha1.Unit, extensionFiles []extensionsv1alpha1.File) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	switch a.extensionConfig.NTP.Daemon {
+func (a *actuator) configureNTPDaemon(config *configv1alpha1.ExtensionConfig, extensionUnits []extensionsv1alpha1.Unit, extensionFiles []extensionsv1alpha1.File) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+	switch config.NTP.Daemon {
 	case configv1alpha1.SystemdTimesyncd:
 		extensionUnits = append(extensionUnits,
 			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
@@ -243,7 +249,7 @@ func (a *actuator) configureNTPDaemon(extensionUnits []extensionsv1alpha1.Unit, 
 			extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
 			extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true), FilePaths: []string{filepath.Join(string(filepath.Separator), "etc", "ntp.conf")}},
 		)
-		templateData, err := a.generateNTPConfig()
+		templateData, err := a.generateNTPConfig(config)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating NTP config: %v", err)
 		}
@@ -253,7 +259,7 @@ func (a *actuator) configureNTPDaemon(extensionUnits []extensionsv1alpha1.Unit, 
 			Permissions: ptr.To[uint32](0644),
 		})
 	default:
-		return nil, nil, fmt.Errorf("unsupported NTP daemon: %s", a.extensionConfig.NTP.Daemon)
+		return nil, nil, fmt.Errorf("unsupported NTP daemon: %s", config.NTP.Daemon)
 	}
 
 	return extensionUnits, extensionFiles, nil

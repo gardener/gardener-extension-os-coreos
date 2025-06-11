@@ -3,6 +3,7 @@ module github.com/gardener/gardener-extension-os-coreos
 go 1.24.0
 
 require (
+	dario.cat/mergo v1.0.1
 	github.com/gardener/gardener v1.120.1
 	github.com/go-logr/logr v1.4.2
 	github.com/onsi/ginkgo/v2 v2.23.3
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1 // indirect
