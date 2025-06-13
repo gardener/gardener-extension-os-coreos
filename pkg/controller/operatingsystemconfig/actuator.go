@@ -12,7 +12,6 @@ import (
 	"strings"
 	"text/template"
 
-	"dario.cat/mergo"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
@@ -69,14 +68,18 @@ func init() {
 }
 
 func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
-	obj := &configv1alpha1.ExtensionConfig{}
-	if _, _, err := decoder.Decode(osc.Spec.ProviderConfig.Raw, nil, obj); err != nil {
+	shootExtensionConfig := &configv1alpha1.ExtensionConfig{}
+	if _, _, err := decoder.Decode(osc.Spec.ProviderConfig.Raw, nil, shootExtensionConfig); err != nil {
 		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
 	}
 
 	config := a.extensionConfig.DeepCopy()
-	if err := mergo.Merge(config, obj, mergo.WithOverwriteWithEmptyValue); err != nil {
-		return nil, fmt.Errorf("failed to merge extension config with provider config: %w", err)
+	if shootExtensionConfig.NTP != nil {
+		if shootExtensionConfig.NTP.NTPD != nil {
+			config.NTP.NTPD = shootExtensionConfig.NTP.NTPD
+		}
+		config.NTP.Enabled = shootExtensionConfig.NTP.Enabled
+		config.NTP.Daemon = shootExtensionConfig.NTP.Daemon
 	}
 
 	return config, nil

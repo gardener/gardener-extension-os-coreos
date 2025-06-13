@@ -196,7 +196,7 @@ touch /var/lib/osc/provision-osc-applied
 				Expect(err).NotTo(HaveOccurred())
 				Expect(userData).To(BeEmpty())
 				Expect(providerConfigData).To(Not(Equal(*globalExtensionConfig)))
-				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)}))
+				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true), FilePaths: []string{"/etc/ntp.conf"}}))
 			})
 			It("should override global default with nothing", func() {
 				providerConfigData := configv1alpha1.ExtensionConfig{
