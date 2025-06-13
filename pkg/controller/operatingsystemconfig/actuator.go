@@ -75,11 +75,7 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 
 	config := a.extensionConfig.DeepCopy()
 	if shootExtensionConfig.NTP != nil {
-		if shootExtensionConfig.NTP.NTPD != nil {
-			config.NTP.NTPD = shootExtensionConfig.NTP.NTPD
-		}
-		config.NTP.Enabled = shootExtensionConfig.NTP.Enabled
-		config.NTP.Daemon = shootExtensionConfig.NTP.Daemon
+		config.NTP = shootExtensionConfig.NTP
 	}
 
 	return config, nil
