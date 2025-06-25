@@ -3,7 +3,7 @@ module github.com/gardener/gardener-extension-os-coreos
 go 1.24.0
 
 require (
-	github.com/gardener/gardener v1.121.1
+	github.com/gardener/gardener v1.121.2
 	github.com/go-logr/logr v1.4.2
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.37.0
