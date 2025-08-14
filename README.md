@@ -1,7 +1,7 @@
 # [Gardener Extension for CoreOS Container Linux](https://gardener.cloud)
 
 [![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener-extension-os-coreos)](https://api.reuse.software/info/github.com/gardener/gardener-extension-os-coreos)
-[![CI Build status](https://concourse.ci.gardener.cloud/api/v1/teams/gardener-public/pipelines/gardener-extension-os-coreos-master/jobs/master-head-update-job/badge)](https://concourse.ci.gardener.cloud/teams/gardener-public/pipelines/gardener-extension-os-coreos-master/jobs/master-head-update-job)
+[![Build status](https://github.com/gardener/gardener-extension-os-coreos/actions/workflows/head-update.yaml/badge.svg?branch=master)](https://github.com/gardener/gardener-extension-os-coreos/actions/workflows/head-update.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener-extension-os-coreos)](https://goreportcard.com/report/github.com/gardener/gardener-extension-os-coreos)
 
 Project Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service. Its main principle is to leverage Kubernetes concepts for all of its tasks.
