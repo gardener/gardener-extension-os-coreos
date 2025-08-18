@@ -8,3 +8,7 @@ jobs:
     uses: ./.github/workflows/build.yaml
     with:
       mode: snapshot
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
