@@ -1,0 +1,13 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: os-coreos
+spec:
+  deployment:
+    extension:
+      helm:
+        ociRepository:
+          ref: europe-docker.pkg.dev/gardener-project/public/charts/gardener/extensions/os-coreos:v1.26.0-dev
+  resources:
+  - kind: OperatingSystemConfig
+    type: coreos
