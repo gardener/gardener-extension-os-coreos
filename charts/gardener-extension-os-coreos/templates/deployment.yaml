@@ -28,6 +28,8 @@ spec:
         networking.gardener.cloud/to-dns: allowed
     spec:
       priorityClassName: gardener-system-900
+      securityContext:
+        runAsNonRoot: true
       serviceAccountName: {{ include "coreos.name" . }}
       containers:
       - name: gardener-extension-os-coreos
@@ -52,6 +54,11 @@ spec:
         resources:
 {{ toYaml .Values.resources | nindent 10 }}
 {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         volumeMounts:
           - name: config
             mountPath: /config
