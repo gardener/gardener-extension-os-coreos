@@ -1,0 +1,19 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  gardener-extension-os-coreos-reviewers:
+  - dergeberl
+  - ialidzhikov
+  - MrBatschner
+  - nschad
+  - rfranzke
+  - Roncossek
+  - Vincinator
+  gardener-extension-os-coreos-approvers:
+  - dergeberl
+  - ialidzhikov
+  - MrBatschner
+  - nschad
+  - rfranzke
+  - Roncossek
+  - Vincinator
