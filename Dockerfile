@@ -14,4 +14,5 @@ FROM gcr.io/distroless/static-debian11:nonroot AS gardener-extension-os-coreos
 WORKDIR /
 
 COPY --from=builder /go/bin/gardener-extension-os-coreos /gardener-extension-os-coreos
+LABEL org.opencontainers.image.source=https://github.com/gardener/gardener-extension-os-coreos
 ENTRYPOINT ["/gardener-extension-os-coreos"]

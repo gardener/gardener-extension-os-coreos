@@ -54,6 +54,8 @@ docker-images:
 	@docker buildx build --platform=$(PLATFORM) \
 		-t $(IMAGE_PREFIX)/$(NAME):$(VERSION) \
 		-t $(IMAGE_PREFIX)/$(NAME):latest \
+		--label org.opencontainers.image.created=$(DATE) \
+        --label org.opencontainers.image.version=$(VERSION) \
 		-f Dockerfile \
 		-m 6g \
 		--target $(EXTENSION_PREFIX)-$(NAME) \
