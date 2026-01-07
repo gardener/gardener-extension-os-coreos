@@ -10,3 +10,11 @@ spec:
     type: coreos
   - kind: OperatingSystemConfig
     type: flatcar
+  - kind: OperatingSystemConfig
+    type: flatcar-alpha
+  - kind: OperatingSystemConfig
+    type: flatcar-beta
+  - kind: OperatingSystemConfig
+    type: flatcar-stable
+  - kind: OperatingSystemConfig
+    type: flatcar-lts

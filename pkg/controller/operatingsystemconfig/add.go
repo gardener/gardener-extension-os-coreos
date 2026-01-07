@@ -32,7 +32,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		Actuator:          NewActuator(mgr, opts.ExtensionConfig),
 		ControllerOptions: opts.Controller,
 		Predicates:        operatingsystemconfig.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
-		Types:             []string{"coreos", "flatcar"},
+		Types:             []string{"coreos", "flatcar", "flatcar-alpha", "flatcar-beta", "flatcar-stable", "flatcar-lts"},
 	})
 }
 
