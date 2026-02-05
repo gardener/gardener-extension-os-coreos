@@ -30,7 +30,7 @@ func NewControllerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "os-coreos-controller-manager",
 
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := options.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %s", err)
 			}

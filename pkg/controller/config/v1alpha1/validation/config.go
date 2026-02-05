@@ -27,7 +27,6 @@ func ValidateExtensionConfig(config *configv1alpha1.ExtensionConfig) field.Error
 		if config.NTP.NTPD != nil {
 			allErrs = append(allErrs, validateNTPDConfig(config.NTP.NTPD, rootPath.Child("ntpd"))...)
 		}
-
 	}
 
 	return allErrs
