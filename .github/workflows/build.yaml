@@ -17,8 +17,7 @@ jobs:
     with:
       mode: ${{ inputs.mode }}
     permissions:
-      contents: read
-      pull-requests: write
+      id-token: write
 
   oci-images:
     name: Build OCI-Images
@@ -28,7 +27,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-      pull-requests: write
     secrets: inherit
     uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@master
     with:
@@ -57,7 +55,6 @@ jobs:
       contents: read
       packages: write
       id-token: write
-      pull-requests: write
     uses: gardener/cc-utils/.github/workflows/helmchart-ocm.yaml@master
     with:
       name: os-coreos
