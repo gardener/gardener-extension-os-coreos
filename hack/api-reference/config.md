@@ -134,20 +134,9 @@ NTPDConfig
 </tr>
 <tr>
 <td>
-<code>restrictToInterface</code></br>
+<code>interfaces</code></br>
 <em>
-bool
-</em>
-</td>
-<td>
-<p>BindToInterface determines whether to only bind to one interface</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>interface</code></br>
-<em>
-string
+[]string
 </em>
 </td>
 <td>

@@ -37,10 +37,5 @@ func validateNTPDConfig(config *configv1alpha1.NTPDConfig, fldPath *field.Path) 
 	if len(config.Servers) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("servers"), "a list of NTP servers is required"))
 	}
-	if config.RestrictToInterface {
-		if config.Interface == "" {
-			allErrs = append(allErrs, field.Required(fldPath.Child("interface"), "a NTP interface is required"))
-		}
-	}
 	return allErrs
 }

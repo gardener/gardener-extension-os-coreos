@@ -35,20 +35,11 @@ var _ = Describe("ExtensionConfig validation", func() {
 
 	It("should fail with daemon systemd-timesyncd and ntpd config set", func() {
 		config.NTP.Daemon = configv1alpha1.SystemdTimesyncd
-		config.NTP.NTPD = &configv1alpha1.NTPDConfig{Servers: []string{"foo.bar"}, Interface: "foo"}
+		config.NTP.NTPD = &configv1alpha1.NTPDConfig{Servers: []string{"foo.bar"}}
 		errs := ValidateExtensionConfig(config)
 		Expect(errs).To(HaveLen(1))
 		Expect(errs[0].Type).To(Equal(field.ErrorTypeForbidden))
 		Expect(errs[0].Field).To(Equal("ntpd"))
-	})
-
-	It("should fail with empty interface", func() {
-		config.NTP.Daemon = configv1alpha1.NTPD
-		config.NTP.NTPD = &configv1alpha1.NTPDConfig{Servers: []string{"foo.bar"}, Interface: "", RestrictToInterface: true}
-		errs := ValidateExtensionConfig(config)
-		Expect(errs).To(HaveLen(1))
-		Expect(errs[0].Type).To(Equal(field.ErrorTypeRequired))
-		Expect(errs[0].Field).To(Equal("ntpd.interface"))
 	})
 
 })

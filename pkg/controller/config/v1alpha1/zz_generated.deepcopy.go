@@ -77,6 +77,11 @@ func (in *NTPDConfig) DeepCopyInto(out *NTPDConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Interfaces != nil {
+		in, out := &in.Interfaces, &out.Interfaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
