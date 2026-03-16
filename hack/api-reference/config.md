@@ -140,7 +140,7 @@ NTPDConfig
 </em>
 </td>
 <td>
-<p>Interface device that the ntpd binds to</p>
+<p>Interfaces for ntpd to bind to. Can be more than one.</p>
 </td>
 </tr>
 </tbody>
