@@ -37,6 +37,6 @@ type NTPConfig struct {
 type NTPDConfig struct {
 	// Servers List of ntp servers
 	Servers []string `json:"servers"`
-	// Interface device that the ntpd binds to
+	// Interfaces devices that the ntpd binds to. Can be more than one.
 	Interfaces []string `json:"interfaces,omitempty"`
 }
