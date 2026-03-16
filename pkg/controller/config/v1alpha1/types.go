@@ -37,4 +37,8 @@ type NTPConfig struct {
 type NTPDConfig struct {
 	// Servers List of ntp servers
 	Servers []string `json:"servers"`
+	// BindToInterface determines whether to only bind to one interface
+	RestrictToInterface bool `json:"restrictToInterface"`
+	// Interface device that the ntpd binds to
+	Interface string `json:"interface,omitempty"`
 }

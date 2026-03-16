@@ -222,7 +222,9 @@ touch /var/lib/osc/provision-osc-applied
 							Enabled: ptr.To(true),
 							Daemon:  configv1alpha1.NTPD,
 							NTPD: &configv1alpha1.NTPDConfig{
-								Servers: []string{"foo.bar", "bar.foo"},
+								Servers:             []string{"foo.bar", "bar.foo"},
+								Interface:           "foo",
+								RestrictToInterface: true,
 							},
 						},
 					},
@@ -244,7 +246,11 @@ server bar.foo iburst
 driftfile /var/lib/ntp/ntp.drift
 restrict default nomodify nopeer noquery notrap limited kod
 restrict 127.0.0.1
-restrict [::1]`,
+restrict [::1]
+
+interface ignore wildcard
+interface listen 127.0.0.1
+interface listen foo`,
 						},
 					},
 				}))

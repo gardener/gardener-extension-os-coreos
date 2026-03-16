@@ -6,3 +6,9 @@ driftfile /var/lib/ntp/ntp.drift
 restrict default nomodify nopeer noquery notrap limited kod
 restrict 127.0.0.1
 restrict [::1]
+
+{{ if .RestrictToInterface -}}
+interface ignore wildcard
+interface listen 127.0.0.1
+interface listen {{ .Interface }}
+{{- end }}
