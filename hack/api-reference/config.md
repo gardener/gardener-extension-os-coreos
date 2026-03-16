@@ -132,6 +132,17 @@ NTPDConfig
 <p>Servers List of ntp servers</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>interfaces</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Interfaces for ntpd to bind to. Can be more than one.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>
