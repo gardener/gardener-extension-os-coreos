@@ -12,7 +12,6 @@ import (
 	_ "github.com/gardener/gardener/.github"
 	_ "github.com/gardener/gardener/.github/ISSUE_TEMPLATE"
 	_ "github.com/gardener/gardener/hack"
-	_ "github.com/gardener/gardener/hack/.ci"
 
 	_ "golang.org/x/tools/cmd/goimports"
 )
