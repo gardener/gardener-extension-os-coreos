@@ -7,15 +7,21 @@ package operatingsystemconfig
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	ignv3_3 "github.com/coreos/ignition/v2/config/v3_3"
+	igntypes "github.com/coreos/ignition/v2/config/v3_3/types"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
@@ -131,41 +137,164 @@ func (a *actuator) Restore(ctx context.Context, logger logr.Logger, osc *extensi
 var containerdTemplateContent string
 
 func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
-	writeFilesToDiskScript, err := operatingsystemconfig.FilesToDiskScript(ctx, a.client, osc.Namespace, osc.Spec.Files)
-	if err != nil {
-		return "", err
+	cfg := igntypes.Config{
+		Ignition: igntypes.Ignition{
+			Version: "3.3.0",
+		},
 	}
-	writeUnitsToDiskScript := operatingsystemconfig.UnitsToDiskScript(osc.Spec.Units)
 
-	script := `#!/bin/bash
-if [ ! -s /etc/containerd/config.toml ]; then
-  mkdir -p /etc/containerd/
-  containerd config default > /etc/containerd/config.toml
-  chmod 0644 /etc/containerd/config.toml
-fi
+	// Write the containerd setup script. It initialises the containerd config and
+	// patches it for cgroups v2 if necessary. A systemd oneshot unit runs it once
+	// before containerd starts.
+	cfg.Storage.Files = append(cfg.Storage.Files, newIgnitionFile(
+		"/opt/bin/containerd-setup.sh",
+		containerdTemplateContent,
+		ptr.To(0o755),
+	))
 
-mkdir -p /etc/systemd/system/containerd.service.d
-cat <<EOF > /etc/systemd/system/containerd.service.d/11-exec_config.conf
-` + customContainerdServiceOverride + `
-EOF
-chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
-` + writeFilesToDiskScript + `
-` + writeUnitsToDiskScript + `
-` + containerdTemplateContent + `
-systemctl daemon-reload
-systemctl enable containerd && systemctl restart containerd
-systemctl enable docker && systemctl restart docker
-`
+	// Convert files from the OSC spec.
+	for _, file := range osc.Spec.Files {
+		source, err := fileContentToDataURI(ctx, a.client, osc.Namespace, file)
+		if err != nil {
+			return "", fmt.Errorf("failed to get content for file %s: %w", file.Path, err)
+		}
+		ignFile := igntypes.File{
+			Node: igntypes.Node{
+				Path: file.Path,
+			},
+			FileEmbedded1: igntypes.FileEmbedded1{
+				Contents: igntypes.Resource{
+					Source: ptr.To(source),
+				},
+			},
+		}
+		if file.Permissions != nil {
+			mode := int(*file.Permissions)
+			ignFile.Mode = &mode
+		}
+		cfg.Storage.Files = append(cfg.Storage.Files, ignFile)
+	}
 
+	// Systemd oneshot unit that runs the containerd setup script exactly once before
+	// containerd starts. The marker file prevents re-execution on subsequent boots.
+	containerdSetupUnitContent := `[Unit]
+Description=Setup containerd configuration
+Before=containerd.service
+ConditionPathExists=!/var/lib/osc/containerd-setup-done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/bin/containerd-setup.sh
+ExecStartPost=/bin/sh -c 'mkdir -p /var/lib/osc && touch /var/lib/osc/containerd-setup-done'
+
+[Install]
+WantedBy=multi-user.target`
+	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
+		Name:     "containerd-setup.service",
+		Contents: ptr.To(containerdSetupUnitContent),
+		Enabled:  ptr.To(true),
+	})
+
+	// Enable containerd with the custom ExecStart drop-in.
+	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
+		Name:    "containerd.service",
+		Enabled: ptr.To(true),
+		Dropins: []igntypes.Dropin{{
+			Name:     "11-exec_config.conf",
+			Contents: &customContainerdServiceOverride,
+		}},
+	})
+
+	// Enable docker (present on Flatcar alongside containerd).
+	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
+		Name:    "docker.service",
+		Enabled: ptr.To(true),
+	})
+
+	// Convert units from the OSC spec.
 	for _, unit := range osc.Spec.Units {
-		script += fmt.Sprintf(`systemctl enable '%s' && systemctl restart --no-block '%s'
-`, unit.Name, unit.Name)
+		ignUnit := igntypes.Unit{
+			Name:    unit.Name,
+			Enabled: unit.Enable,
+		}
+		if unit.Content != nil {
+			ignUnit.Contents = unit.Content
+		}
+		for _, dropin := range unit.DropIns {
+			content := dropin.Content
+			ignUnit.Dropins = append(ignUnit.Dropins, igntypes.Dropin{
+				Name:     dropin.Name,
+				Contents: &content,
+			})
+		}
+		cfg.Systemd.Units = append(cfg.Systemd.Units, ignUnit)
 	}
 
-	// The provisioning script must run only once.
-	script = operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script)
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal ignition config: %w", err)
+	}
 
-	return script, nil
+	// Validate the generated config against the Ignition v3.3 schema.
+	if _, rpt, err := ignv3_3.Parse(data); err != nil {
+		return "", fmt.Errorf("ignition config validation failed: %w (report: %s)", err, rpt)
+	}
+
+	return string(data), nil
+}
+
+// newIgnitionFile creates an igntypes.File with the given content encoded as a base64 data URI.
+func newIgnitionFile(path, content string, mode *int) igntypes.File {
+	return igntypes.File{
+		Node: igntypes.Node{
+			Path: path,
+		},
+		FileEmbedded1: igntypes.FileEmbedded1{
+			Contents: igntypes.Resource{
+				Source: ptr.To("data:;base64," + base64.StdEncoding.EncodeToString([]byte(content))),
+			},
+			Mode: mode,
+		},
+	}
+}
+
+// fileContentToDataURI resolves an OSC file's content (inline or from a k8s Secret) and
+// returns it as a data URI suitable for an Ignition storage file source.
+//
+// For plain-encoded inline content (encoding: "") we use a non-base64 data URI
+// (data:,<url-encoded>) so that the machine-controller-manager can find and replace
+// placeholder strings such as <<BOOTSTRAP_TOKEN>> and <<MACHINE_NAME>>.
+// The MCM explicitly looks for url.QueryEscape(placeholder) when processing Ignition
+// user-data. Using base64 would hide these placeholders from the MCM, causing the node
+// to receive the literal placeholder string as the bootstrap token.
+//
+// For base64-encoded inline content (encoding: "b64") and for Secret references we use
+// the standard base64 data URI (data:;base64,<b64>) because the content does not
+// contain MCM placeholders.
+func fileContentToDataURI(ctx context.Context, cl client.Client, namespace string, file extensionsv1alpha1.File) (string, error) {
+	if file.Content.Inline != nil {
+		if file.Content.Inline.Encoding == string(extensionsv1alpha1.B64FileCodecID) {
+			// Data is already base64-encoded; embed it directly in a base64 data URI.
+			return "data:;base64," + file.Content.Inline.Data, nil
+		}
+		// Plain text: use a percent-encoded data URI so MCM placeholder strings
+		// (<<BOOTSTRAP_TOKEN>>, <<MACHINE_NAME>>) remain visible in the Ignition JSON
+		// and can be substituted by the machine-controller-manager before the VM boots.
+		return "data:," + url.QueryEscape(file.Content.Inline.Data), nil
+	}
+	if file.Content.SecretRef != nil {
+		secret := &corev1.Secret{}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: file.Content.SecretRef.Name}, secret); err != nil {
+			return "", fmt.Errorf("failed to get secret %q: %w", file.Content.SecretRef.Name, err)
+		}
+		data, ok := secret.Data[file.Content.SecretRef.DataKey]
+		if !ok {
+			return "", fmt.Errorf("key %q not found in secret %q", file.Content.SecretRef.DataKey, file.Content.SecretRef.Name)
+		}
+		return "data:;base64," + base64.StdEncoding.EncodeToString(data), nil
+	}
+	return "", fmt.Errorf("file %q has neither inline nor secret content", file.Path)
 }
 
 func (a *actuator) generateNTPConfig(config *configv1alpha1.ExtensionConfig) (string, error) {

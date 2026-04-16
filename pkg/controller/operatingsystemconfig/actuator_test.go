@@ -7,6 +7,7 @@ package operatingsystemconfig_test
 import (
 	"bytes"
 	"context"
+	stdjson "encoding/json"
 	"path/filepath"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
@@ -27,6 +28,33 @@ import (
 	configv1alpha1 "github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
 	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
+
+// ignitionTestConfig mirrors the Ignition v3 JSON structure for test assertions only.
+type ignitionTestConfig struct {
+	Ignition struct {
+		Version string `json:"version"`
+	} `json:"ignition"`
+	Storage struct {
+		Files []struct {
+			Path     string `json:"path"`
+			Contents struct {
+				Source string `json:"source"`
+			} `json:"contents"`
+			Mode *int `json:"mode"`
+		} `json:"files"`
+	} `json:"storage"`
+	Systemd struct {
+		Units []struct {
+			Name     string  `json:"name"`
+			Contents *string `json:"contents"`
+			Enabled  *bool   `json:"enabled"`
+			Dropins  []struct {
+				Name     string  `json:"name"`
+				Contents *string `json:"contents"`
+			} `json:"dropins"`
+		} `json:"units"`
+	} `json:"systemd"`
+}
 
 var _ = Describe("Actuator", func() {
 	var (
@@ -61,88 +89,91 @@ var _ = Describe("Actuator", func() {
 		osc = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 				Purpose: extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-				Units:   []extensionsv1alpha1.Unit{{Name: "some-unit", Content: ptr.To("foo")}},
+				Units:   []extensionsv1alpha1.Unit{{Name: "some-unit.service", Content: ptr.To("[Unit]\nDescription=Some Unit\n[Install]\nWantedBy=multi-user.target")}},
 				Files:   []extensionsv1alpha1.File{{Path: "/some/file", Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "bar"}}}},
 			},
 		}
 	})
 
 	When("purpose is 'provision'", func() {
-		expectedUserData := `#!/bin/bash
-if [ -f "/var/lib/osc/provision-osc-applied" ]; then
-  echo "Provision OSC already applied, exiting..."
-  exit 0
-fi
-
-if [ ! -s /etc/containerd/config.toml ]; then
-  mkdir -p /etc/containerd/
-  containerd config default > /etc/containerd/config.toml
-  chmod 0644 /etc/containerd/config.toml
-fi
-
-mkdir -p /etc/systemd/system/containerd.service.d
-cat <<EOF > /etc/systemd/system/containerd.service.d/11-exec_config.conf
-[Service]
-ExecStart=
-ExecStart=/usr/bin/containerd --config /etc/containerd/config.toml
-EOF
-chmod 0644 /etc/systemd/system/containerd.service.d/11-exec_config.conf
-
-mkdir -p "/some"
-
-cat << EOF | base64 -d > "/some/file"
-YmFy
-EOF
-
-
-cat << EOF | base64 -d > "/etc/systemd/system/some-unit"
-Zm9v
-EOF
-#!/bin/bash
-
-CONTAINERD_CONFIG=/etc/containerd/config.toml
-
-ALTERNATE_LOGROTATE_PATH="/usr/bin/logrotate"
-
-CONTAINERD="/usr/bin/containerd"
-
-# initialize default containerd config if does not exist
-if [ ! -s "$CONTAINERD_CONFIG" ]; then
-    mkdir -p "$(dirname "$CONTAINERD_CONFIG")"
-    ${CONTAINERD} config default > "$CONTAINERD_CONFIG"
-    chmod 0644 "$CONTAINERD_CONFIG"
-fi
-
-# if cgroups v2 are used, patch containerd configuration to use systemd cgroup driver
-if [[ -e /sys/fs/cgroup/cgroup.controllers ]]; then
-    sed -i "s/SystemdCgroup *= *false/SystemdCgroup = true/" "$CONTAINERD_CONFIG"
-fi
-
-# some flatcar versions have logrotate at /usr/bin instead of /usr/sbin
-if [ -f "$ALTERNATE_LOGROTATE_PATH" ]; then
-    sed -i "s;/usr/sbin/logrotate;$ALTERNATE_LOGROTATE_PATH;" /etc/systemd/system/containerd-logrotate.service
-    systemctl daemon-reload
-fi
-
-systemctl daemon-reload
-systemctl enable containerd && systemctl restart containerd
-systemctl enable docker && systemctl restart docker
-systemctl enable 'some-unit' && systemctl restart --no-block 'some-unit'
-
-
-mkdir -p /var/lib/osc
-touch /var/lib/osc/provision-osc-applied
-`
-
 		Describe("#Reconcile", func() {
-			It("should not return an error", func() {
+			It("should return a valid Ignition v3 config JSON", func() {
 				userData, extensionUnits, extensionFiles, inplaceUpdateStatus, err := actuator.Reconcile(ctx, log, osc)
 				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(userData)).To(Equal(expectedUserData))
 				Expect(extensionUnits).To(BeEmpty())
 				Expect(extensionFiles).To(BeEmpty())
 				Expect(inplaceUpdateStatus).To(BeNil())
+
+				var ign ignitionTestConfig
+				Expect(stdjson.Unmarshal(userData, &ign)).To(Succeed())
+
+				By("having Ignition spec version 3.3.0")
+				Expect(ign.Ignition.Version).To(Equal("3.3.0"))
+
+				By("including the containerd setup script as a file")
+				filePaths := make([]string, 0, len(ign.Storage.Files))
+				for _, f := range ign.Storage.Files {
+					filePaths = append(filePaths, f.Path)
+				}
+				Expect(filePaths).To(ContainElement("/opt/bin/containerd-setup.sh"))
+
+				By("writing the containerd setup script as executable")
+				for _, f := range ign.Storage.Files {
+					if f.Path == "/opt/bin/containerd-setup.sh" {
+						Expect(f.Mode).NotTo(BeNil())
+						Expect(*f.Mode).To(Equal(0o755))
+					}
+				}
+
+				By("including OSC files")
+				Expect(filePaths).To(ContainElement("/some/file"))
+				for _, f := range ign.Storage.Files {
+					if f.Path == "/some/file" {
+						// Plain-encoded content uses a percent-encoded data URI so MCM
+						// placeholder strings remain visible for substitution.
+						Expect(f.Contents.Source).To(Equal("data:,bar"))
+					}
+				}
+
+				By("including a containerd-setup systemd unit that runs before containerd")
+				unitNames := make([]string, 0, len(ign.Systemd.Units))
+				for _, u := range ign.Systemd.Units {
+					unitNames = append(unitNames, u.Name)
+				}
+				Expect(unitNames).To(ContainElements(
+					"containerd-setup.service",
+					"containerd.service",
+					"docker.service",
+					"some-unit.service",
+				))
+
+				By("enabling the containerd-setup unit")
+				for _, u := range ign.Systemd.Units {
+					if u.Name == "containerd-setup.service" {
+						Expect(u.Enabled).To(Equal(ptr.To(true)))
+						Expect(u.Contents).NotTo(BeNil())
+						Expect(*u.Contents).To(ContainSubstring("Before=containerd.service"))
+						Expect(*u.Contents).To(ContainSubstring("ExecStart=/opt/bin/containerd-setup.sh"))
+					}
+				}
+
+				By("adding the containerd exec drop-in via the systemd unit")
+				for _, u := range ign.Systemd.Units {
+					if u.Name == "containerd.service" {
+						Expect(u.Enabled).To(Equal(ptr.To(true)))
+						Expect(u.Dropins).To(HaveLen(1))
+						Expect(u.Dropins[0].Name).To(Equal("11-exec_config.conf"))
+						Expect(u.Dropins[0].Contents).NotTo(BeNil())
+					}
+				}
+
+				By("including OSC units with their content")
+				for _, u := range ign.Systemd.Units {
+					if u.Name == "some-unit.service" {
+						Expect(u.Contents).NotTo(BeNil())
+						Expect(*u.Contents).To(ContainSubstring("[Unit]"))
+					}
+				}
 			})
 		})
 	})
