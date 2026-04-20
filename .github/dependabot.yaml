@@ -5,6 +5,12 @@ updates:
   directory: /
   schedule:
     interval: daily
+  groups:
+    gardener-dependencies:
+      applies-to: "version-updates"
+      patterns:
+        - "github.com/gardener/gardener"
+        - "github.com/gardener/gardener/*"
   open-pull-requests-limit: 5
   allow:
   - dependency-name: "github.com/gardener/gardener"
