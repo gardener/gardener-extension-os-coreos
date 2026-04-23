@@ -4,25 +4,34 @@
 <a href="#config.coreos.os.extensions.gardener.cloud%2fv1alpha1">config.coreos.os.extensions.gardener.cloud/v1alpha1</a>
 </li>
 </ul>
+
 <h2 id="config.coreos.os.extensions.gardener.cloud/v1alpha1">config.coreos.os.extensions.gardener.cloud/v1alpha1</h2>
 <p>
-<p>Package v1alpha1 contains the API for configuring the os-coreos extension.</p>
+
 </p>
-Resource Types:
-<ul></ul>
-<h3 id="config.coreos.os.extensions.gardener.cloud/v1alpha1.Daemon">Daemon
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPConfig">NTPConfig</a>)
-</p>
-<p>
-</p>
-<h3 id="config.coreos.os.extensions.gardener.cloud/v1alpha1.ExtensionConfig">ExtensionConfig
+
+<h3 id="daemon">Daemon
 </h3>
+<p><em>Underlying type: string</em></p>
+
+
 <p>
-<p>ExtensionConfig is the configuration for the os-coreos extension.</p>
+(<em>Appears on:</em><a href="#ntpconfig">NTPConfig</a>)
 </p>
+
+<p>
+
+</p>
+
+
+<h3 id="extensionconfig">ExtensionConfig
+</h3>
+
+
+<p>
+ExtensionConfig is the configuration for the os-coreos extension.
+</p>
+
 <table>
 <thead>
 <tr>
@@ -31,13 +40,12 @@ Resource Types:
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>ntp</code></br>
 <em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPConfig">
-NTPConfig
-</a>
+<a href="#ntpconfig">NTPConfig</a>
 </em>
 </td>
 <td>
@@ -45,17 +53,23 @@ NTPConfig
 <p>NTP to configure either systemd-timesyncd or ntpd</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPConfig">NTPConfig
+
+
+<h3 id="ntpconfig">NTPConfig
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.ExtensionConfig">ExtensionConfig</a>)
+(<em>Appears on:</em><a href="#extensionconfig">ExtensionConfig</a>)
 </p>
+
 <p>
-<p>NTPConfig General NTP Config for either systemd-timesyncd or ntpd</p>
+NTPConfig General NTP Config for either systemd-timesyncd or ntpd
 </p>
+
 <table>
 <thead>
 <tr>
@@ -64,11 +78,12 @@ NTPConfig
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>enabled</code></br>
 <em>
-bool
+boolean
 </em>
 </td>
 <td>
@@ -79,9 +94,7 @@ bool
 <td>
 <code>daemon</code></br>
 <em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.Daemon">
-Daemon
-</a>
+<a href="#daemon">Daemon</a>
 </em>
 </td>
 <td>
@@ -92,9 +105,7 @@ Daemon
 <td>
 <code>ntpd</code></br>
 <em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPDConfig">
-NTPDConfig
-</a>
+<a href="#ntpdconfig">NTPDConfig</a>
 </em>
 </td>
 <td>
@@ -102,17 +113,23 @@ NTPDConfig
 <p>NTPD to configure the ntpd client</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<h3 id="config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPDConfig">NTPDConfig
+
+
+<h3 id="ntpdconfig">NTPDConfig
 </h3>
+
+
 <p>
-(<em>Appears on:</em>
-<a href="#config.coreos.os.extensions.gardener.cloud/v1alpha1.NTPConfig">NTPConfig</a>)
+(<em>Appears on:</em><a href="#ntpconfig">NTPConfig</a>)
 </p>
+
 <p>
-<p>NTPDConfig is the struct used in the ntp-config.conf.tpl template file</p>
+NTPDConfig is the struct used in the ntp-config.conf.tpl template file
 </p>
+
 <table>
 <thead>
 <tr>
@@ -121,11 +138,12 @@ NTPDConfig
 </tr>
 </thead>
 <tbody>
+
 <tr>
 <td>
 <code>servers</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
@@ -136,16 +154,15 @@ NTPDConfig
 <td>
 <code>interfaces</code></br>
 <em>
-[]string
+string array
 </em>
 </td>
 <td>
 <p>Interfaces for ntpd to bind to. Can be more than one.</p>
 </td>
 </tr>
+
 </tbody>
 </table>
-<hr/>
-<p><em>
-Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
-</em></p>
+
+
