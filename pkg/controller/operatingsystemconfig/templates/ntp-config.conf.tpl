@@ -10,5 +10,7 @@ restrict [::1]
 {{ if .Interfaces -}}
 interface ignore wildcard
 interface listen 127.0.0.1
-interface listen {{ .Interfaces | join " " }}
+{{ range .Interfaces -}}
+interface listen {{ . }}
+{{ end -}}
 {{- end }}
