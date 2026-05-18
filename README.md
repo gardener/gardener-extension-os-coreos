@@ -1,4 +1,4 @@
-# [Gardener Extension for CoreOS Container Linux](https://gardener.cloud)
+# Gardener Extension for CoreOS Container Linux
 
 [![REUSE status](https://api.reuse.software/badge/github.com/gardener/gardener-extension-os-coreos)](https://api.reuse.software/info/github.com/gardener/gardener-extension-os-coreos)
 [![Build status](https://github.com/gardener/gardener-extension-os-coreos/actions/workflows/head-update.yaml/badge.svg?branch=master)](https://github.com/gardener/gardener-extension-os-coreos/actions/workflows/head-update.yaml)
