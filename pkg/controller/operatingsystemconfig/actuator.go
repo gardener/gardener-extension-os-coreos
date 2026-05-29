@@ -139,7 +139,7 @@ var containerdTemplateContent string
 func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
 	cfg := igntypes.Config{
 		Ignition: igntypes.Ignition{
-			Version: "3.3.0",
+			Version: igntypes.MaxVersion.String(),
 		},
 	}
 
