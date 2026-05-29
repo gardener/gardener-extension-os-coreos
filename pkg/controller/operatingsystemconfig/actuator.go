@@ -178,8 +178,8 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 		cfg.Storage.Files = append(cfg.Storage.Files, ignFile)
 	}
 
-	// Systemd oneshot unit that runs the containerd setup script exactly once before
-	// containerd starts. The marker file prevents re-execution on subsequent boots.
+	// Systemd oneshot unit that runs the containerd setup script before containerd
+	// starts. The script is idempotent, so it can safely run on every boot.
 	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
 		Name:     "containerd-setup.service",
 		Contents: ptr.To(containerdSetupUnitContent),
@@ -204,9 +204,13 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 
 	// Convert units from the OSC spec.
 	for _, unit := range osc.Spec.Units {
+		// TODO: The previous (pre-Ignition) provisioning enabled every unit unconditionally.
+		// We default a missing Enable to true to keep that behavior 1:1 (e.g. for
+		// sshd-ensurer.service, which has no Enable set). Revisit whether we should honor
+		// unit.Enable directly instead and drop this default.
 		ignUnit := igntypes.Unit{
 			Name:    unit.Name,
-			Enabled: unit.Enable,
+			Enabled: ptr.To(ptr.Deref(unit.Enable, true)),
 		}
 		if unit.Content != nil {
 			ignUnit.Contents = unit.Content

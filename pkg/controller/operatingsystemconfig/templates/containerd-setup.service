@@ -1,13 +1,11 @@
 [Unit]
 Description=Setup containerd configuration
 Before=containerd.service
-ConditionPathExists=!/var/lib/osc/containerd-setup-done
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/opt/bin/containerd-setup.sh
-ExecStartPost=/bin/sh -c 'mkdir -p /var/lib/osc && touch /var/lib/osc/containerd-setup-done'
 
 [Install]
 WantedBy=multi-user.target
