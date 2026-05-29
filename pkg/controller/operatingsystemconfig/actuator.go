@@ -136,6 +136,9 @@ func (a *actuator) Restore(ctx context.Context, logger logr.Logger, osc *extensi
 //go:embed templates/containerd/run-command.sh.tpl
 var containerdTemplateContent string
 
+//go:embed templates/containerd-setup.service
+var containerdSetupUnitContent string
+
 func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
 	cfg := igntypes.Config{
 		Ignition: igntypes.Ignition{
@@ -177,19 +180,6 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 
 	// Systemd oneshot unit that runs the containerd setup script exactly once before
 	// containerd starts. The marker file prevents re-execution on subsequent boots.
-	containerdSetupUnitContent := `[Unit]
-Description=Setup containerd configuration
-Before=containerd.service
-ConditionPathExists=!/var/lib/osc/containerd-setup-done
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/opt/bin/containerd-setup.sh
-ExecStartPost=/bin/sh -c 'mkdir -p /var/lib/osc && touch /var/lib/osc/containerd-setup-done'
-
-[Install]
-WantedBy=multi-user.target`
 	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
 		Name:     "containerd-setup.service",
 		Contents: ptr.To(containerdSetupUnitContent),
