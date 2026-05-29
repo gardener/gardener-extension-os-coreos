@@ -10,6 +10,7 @@ import (
 	stdjson "encoding/json"
 	"path/filepath"
 
+	igntypes "github.com/coreos/ignition/v2/config/v3_3/types"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -107,8 +108,8 @@ var _ = Describe("Actuator", func() {
 				var ign ignitionTestConfig
 				Expect(stdjson.Unmarshal(userData, &ign)).To(Succeed())
 
-				By("having Ignition spec version 3.3.0")
-				Expect(ign.Ignition.Version).To(Equal("3.3.0"))
+				By("having the Ignition spec version of the imported config package")
+				Expect(ign.Ignition.Version).To(Equal(igntypes.MaxVersion.String()))
 
 				By("including the containerd setup script as a file")
 				filePaths := make([]string, 0, len(ign.Storage.Files))
