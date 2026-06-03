@@ -1,0 +1,11 @@
+[Unit]
+Description=Setup containerd configuration
+Before=containerd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/bin/containerd-setup.sh
+
+[Install]
+WantedBy=multi-user.target
