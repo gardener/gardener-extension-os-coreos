@@ -196,10 +196,18 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 		}},
 	})
 
-	// Enable docker (present on Flatcar alongside containerd).
-	cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
-		Name:    "docker.service",
-		Enabled: ptr.To(true),
+	// Remove the docker sysext image shipped by Flatcar. We only use containerd,
+	// so the docker extension is neutralized by linking its image to /dev/null,
+	// which prevents it from being loaded at boot.
+	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
+	cfg.Storage.Links = append(cfg.Storage.Links, igntypes.Link{
+		Node: igntypes.Node{
+			Path:      "/etc/extensions/docker-flatcar.raw",
+			Overwrite: ptr.To(true),
+		},
+		LinkEmbedded1: igntypes.LinkEmbedded1{
+			Target: ptr.To("/dev/null"),
+		},
 	})
 
 	// Convert units from the OSC spec.
