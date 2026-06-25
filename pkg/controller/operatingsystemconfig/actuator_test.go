@@ -43,6 +43,11 @@ type ignitionTestConfig struct {
 			} `json:"contents"`
 			Mode *int `json:"mode"`
 		} `json:"files"`
+		Links []struct {
+			Path      string  `json:"path"`
+			Target    *string `json:"target"`
+			Overwrite *bool   `json:"overwrite"`
+		} `json:"links"`
 	} `json:"storage"`
 	Systemd struct {
 		Units []struct {
@@ -144,9 +149,18 @@ var _ = Describe("Actuator", func() {
 				Expect(unitNames).To(ContainElements(
 					"containerd-setup.service",
 					"containerd.service",
-					"docker.service",
 					"some-unit.service",
 				))
+
+				By("not enabling docker, since only containerd is used")
+				Expect(unitNames).NotTo(ContainElement("docker.service"))
+
+				By("removing the Flatcar docker sysext image by linking it to /dev/null")
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/extensions/docker-flatcar.raw"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link removing the docker sysext image")
 
 				By("enabling the containerd-setup unit")
 				for _, u := range ign.Systemd.Units {

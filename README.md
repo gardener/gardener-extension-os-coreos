@@ -41,7 +41,7 @@ status:
       namespace: default
   command: /usr/bin/coreos-cloudinit -from-file=<path>
   units:
-  - docker-monitor.service
+  - containerd-monitor.service
   - kubelet-monitor.service
   - kubelet.service
 ```
