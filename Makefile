@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ENSURE_GARDENER_MOD         := $(shell go get github.com/gardener/gardener@$$(go list -m -f "{{.Version}}" github.com/gardener/gardener))
+GARDENER_VERSION            := $(shell go list -m -f "{{.Version}}" github.com/gardener/gardener)
 GARDENER_HACK_DIR           := $(shell go list -m -f "{{.Dir}}" github.com/gardener/gardener)/hack
 EXTENSION_PREFIX            := gardener-extension
 NAME                        := os-coreos
@@ -34,7 +35,7 @@ start:
 		./cmd/$(EXTENSION_PREFIX)-$(NAME) \
 		--leader-election=$(LEADER_ELECTION) \
 		--ignore-operation-annotation=$(IGNORE_OPERATION_ANNOTATION) \
-		--gardener-version="v1.56.0"
+		--gardener-version="$(GARDENER_VERSION)"
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
