@@ -200,15 +200,47 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	// so the docker extension is neutralized by linking its image to /dev/null,
 	// which prevents it from being loaded at boot.
 	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
-	cfg.Storage.Links = append(cfg.Storage.Links, igntypes.Link{
-		Node: igntypes.Node{
-			Path:      "/etc/extensions/docker-flatcar.raw",
-			Overwrite: ptr.To(true),
-		},
-		LinkEmbedded1: igntypes.LinkEmbedded1{
-			Target: ptr.To("/dev/null"),
-		},
-	})
+	//
+	// Additionally, mask update-engine.service and locksmithd.service by linking
+	// them to /dev/null. Automatic OS updates (update-engine) and the associated
+	// reboot manager (locksmithd) are not desired, since node updates are managed
+	// by Gardener (e.g. via machine image version updates).
+	//
+	// The same applies to the newer systemd-sysupdate mechanism: its timers would
+	// periodically check for updates and even reboot the node automatically
+	// (systemd-sysupdate-reboot.timer), so they are masked as well.
+	//
+	// Note that simply disabling these units is not sufficient: Flatcar ships
+	// vendor "wants" symlinks under /usr/lib/systemd/system, which is read-only
+	// and pulls the units in on every boot regardless of their enablement state.
+	// Masking via /etc (which takes precedence over /usr) is reboot-safe.
+	for _, unitToMask := range []string{
+		"update-engine.service",
+		"locksmithd.service",
+		"systemd-sysupdate.timer",
+		"systemd-sysupdate-reboot.timer",
+	} {
+		cfg.Storage.Links = append(cfg.Storage.Links, igntypes.Link{
+			Node: igntypes.Node{
+				Path:      "/etc/systemd/system/" + unitToMask,
+				Overwrite: ptr.To(true),
+			},
+			LinkEmbedded1: igntypes.LinkEmbedded1{
+				Target: ptr.To("/dev/null"),
+			},
+		})
+	}
+
+	cfg.Storage.Links = append(cfg.Storage.Links,
+		igntypes.Link{
+			Node: igntypes.Node{
+				Path:      "/etc/extensions/docker-flatcar.raw",
+				Overwrite: ptr.To(true),
+			},
+			LinkEmbedded1: igntypes.LinkEmbedded1{
+				Target: ptr.To("/dev/null"),
+			},
+		})
 
 	// Convert units from the OSC spec.
 	for _, unit := range osc.Spec.Units {

@@ -162,6 +162,40 @@ var _ = Describe("Actuator", func() {
 					HaveField("Overwrite", ptr.To(true)),
 				)), "expected a link removing the docker sysext image")
 
+				By("masking update-engine.service by linking it to /dev/null")
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/systemd/system/update-engine.service"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link masking update-engine.service")
+
+				By("masking locksmithd.service by linking it to /dev/null")
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/systemd/system/locksmithd.service"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link masking locksmithd.service")
+
+				By("masking the systemd-sysupdate timers by linking them to /dev/null")
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/systemd/system/systemd-sysupdate.timer"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link masking systemd-sysupdate.timer")
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/systemd/system/systemd-sysupdate-reboot.timer"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link masking systemd-sysupdate-reboot.timer")
+
+				By("not enabling update-engine, locksmithd, and systemd-sysupdate, since OS updates are managed by Gardener")
+				Expect(unitNames).NotTo(ContainElements(
+					"update-engine.service",
+					"locksmithd.service",
+					"systemd-sysupdate.timer",
+					"systemd-sysupdate-reboot.timer",
+				))
+
 				By("enabling the containerd-setup unit")
 				for _, u := range ign.Systemd.Units {
 					if u.Name == "containerd-setup.service" {
