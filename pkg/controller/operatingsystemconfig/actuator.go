@@ -196,12 +196,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 		}},
 	})
 
-	// Remove the docker sysext image shipped by Flatcar. We only use containerd,
-	// so the docker extension is neutralized by linking its image to /dev/null,
-	// which prevents it from being loaded at boot.
-	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
-	//
-	// Additionally, mask update-engine.service and locksmithd.service by linking
+	// Mask update-engine.service and locksmithd.service by linking
 	// them to /dev/null. Automatic OS updates (update-engine) and the associated
 	// reboot manager (locksmithd) are not desired, since node updates are managed
 	// by Gardener (e.g. via machine image version updates).
@@ -231,6 +226,11 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 		})
 	}
 
+	// Remove the docker sysext image shipped by Flatcar. We only use containerd,
+	// so the docker extension is neutralized by linking its image to /dev/null,
+	// which prevents it from being loaded at boot.
+	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
+	//
 	cfg.Storage.Links = append(cfg.Storage.Links,
 		igntypes.Link{
 			Node: igntypes.Node{
