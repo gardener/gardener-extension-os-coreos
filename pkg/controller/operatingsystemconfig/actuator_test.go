@@ -353,6 +353,8 @@ interface listen dev2
 							Content: `[Service]
 ExecStart=
 ExecStart=/bin/true
+Restart=
+Restart=no
 `,
 						}},
 					},
@@ -365,6 +367,8 @@ ExecStart=/bin/true
 							Content: `[Service]
 ExecStart=
 ExecStart=/bin/true
+Restart=
+Restart=no
 `,
 						}},
 					},
