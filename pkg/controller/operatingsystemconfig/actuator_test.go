@@ -344,8 +344,30 @@ interface listen dev2
 				Expect(extensionUnits).To(ConsistOf(
 					extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true)},
 					extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-					extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-					extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
+					extensionsv1alpha1.Unit{
+						Name:    "update-engine.service",
+						Command: new(extensionsv1alpha1.CommandStop),
+						Enable:  new(false),
+						DropIns: []extensionsv1alpha1.DropIn{{
+							Name: "20-noop-execstart.conf",
+							Content: `[Service]
+ExecStart=
+ExecStart=/bin/true
+`,
+						}},
+					},
+					extensionsv1alpha1.Unit{
+						Name:    "locksmithd.service",
+						Command: new(extensionsv1alpha1.CommandStop),
+						Enable:  new(false),
+						DropIns: []extensionsv1alpha1.DropIn{{
+							Name: "20-noop-execstart.conf",
+							Content: `[Service]
+ExecStart=
+ExecStart=/bin/true
+`,
+						}},
+					},
 					extensionsv1alpha1.Unit{
 						Name: "kubelet.service",
 						DropIns: []extensionsv1alpha1.DropIn{{
