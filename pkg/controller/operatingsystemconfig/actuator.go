@@ -44,7 +44,6 @@ var customContainerdServiceOverride string
 const noopExecStartDropIn = `[Service]
 ExecStart=
 ExecStart=/bin/true
-Restart=
 Restart=no
 `
 
