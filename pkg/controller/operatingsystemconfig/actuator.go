@@ -41,6 +41,12 @@ var ntpConfigTemplateContent string
 //go:embed templates/11-exec_config.conf
 var customContainerdServiceOverride string
 
+const noopExecStartDropIn = `[Service]
+ExecStart=
+ExecStart=/bin/true
+Restart=no
+`
+
 var ntpConfigTemplate *template.Template
 var decoder runtime.Decoder
 
@@ -350,11 +356,22 @@ func (a *actuator) handleReconcileOSC(config *configv1alpha1.ExtensionConfig, _ 
 		err            error
 	)
 
-	// disable automatic updates
-	extensionUnits = append(extensionUnits,
-		extensionsv1alpha1.Unit{Name: "update-engine.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-		extensionsv1alpha1.Unit{Name: "locksmithd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)},
-	)
+	// Disable automatic updates. The Ignition provisioning flow masks these
+	// units by symlinking them to /dev/null, but that only applies to new
+	// nodes. For existing nodes we also override ExecStart to /bin/true so
+	// the units become no-ops.
+	for _, name := range []string{"update-engine.service", "locksmithd.service"} {
+		extensionUnits = append(extensionUnits,
+			extensionsv1alpha1.Unit{
+				Name:    name,
+				Command: new(extensionsv1alpha1.CommandStop),
+				Enable:  new(false),
+				DropIns: []extensionsv1alpha1.DropIn{{
+					Name:    "20-noop-execstart.conf",
+					Content: noopExecStartDropIn,
+				}},
+			})
+	}
 
 	if ptr.Deref(config.NTP.Enabled, true) {
 		if extensionUnits, extensionFiles, err = a.configureNTPDaemon(config, extensionUnits, extensionFiles); err != nil {
