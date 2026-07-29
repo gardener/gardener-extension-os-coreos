@@ -94,7 +94,7 @@ var _ = Describe("Actuator", func() {
 	},
 		Entry("no shoot config",
 			configv1alpha1.ExtensionConfig{
-				DisableDocker: new(true),
+				EnableDocker: new(false),
 				NTP: &configv1alpha1.NTPConfig{
 					Enabled: ptr.To(true),
 					Daemon:  configv1alpha1.SystemdTimesyncd,
@@ -102,7 +102,7 @@ var _ = Describe("Actuator", func() {
 			},
 			configv1alpha1.ExtensionConfig{},
 			configv1alpha1.ExtensionConfig{
-				DisableDocker: new(true),
+				EnableDocker: new(false),
 				NTP: &configv1alpha1.NTPConfig{
 					Enabled: ptr.To(true),
 					Daemon:  configv1alpha1.SystemdTimesyncd,
@@ -110,13 +110,13 @@ var _ = Describe("Actuator", func() {
 			}),
 		Entry("overwrite DisableDocker",
 			configv1alpha1.ExtensionConfig{
-				DisableDocker: new(true),
+				EnableDocker: new(true),
 			},
 			configv1alpha1.ExtensionConfig{
-				DisableDocker: new(false),
+				EnableDocker: new(false),
 			},
 			configv1alpha1.ExtensionConfig{
-				DisableDocker: new(false),
+				EnableDocker: new(false),
 			}),
 		Entry("overwrite ntp",
 			configv1alpha1.ExtensionConfig{
@@ -158,7 +158,6 @@ var _ = Describe("Actuator", func() {
 		mgr = test.FakeManager{Client: fakeClient}
 		extensionConfig := Config{
 			ExtensionConfig: &configv1alpha1.ExtensionConfig{
-				DisableDocker: new(true),
 				NTP: &configv1alpha1.NTPConfig{
 					Enabled: ptr.To(true),
 					Daemon:  configv1alpha1.SystemdTimesyncd,
@@ -301,10 +300,10 @@ var _ = Describe("Actuator", func() {
 				}
 			})
 
-			It("should override global defaults on a shoot by shoot basis and not disable docker", func() {
+			It("should override global defaults on a shoot by shoot basis and enable docker", func() {
 				// Shoot specific override via providerConfig
 				providerConfigData := configv1alpha1.ExtensionConfig{
-					DisableDocker: new(false),
+					EnableDocker: new(true),
 				}
 				providerConfigBuffer := new(bytes.Buffer)
 				err := encoder.Encode(&providerConfigData, providerConfigBuffer)

@@ -43,14 +43,14 @@ ExtensionConfig is the configuration for the os-coreos extension.
 
 <tr>
 <td>
-<code>disableDocker</code></br>
+<code>enableDocker</code></br>
 <em>
 boolean
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DisableDocker specifies if docker should be removed from the nodes.<br />Defaults to true, as everything is done by containerd.</p>
+<p>EnableDocker specifies if docker should be available on the nodes.<br />Defaults to false, as docker is only need for special use-cases.</p>
 </td>
 </tr>
 <tr>

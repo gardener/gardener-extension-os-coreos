@@ -91,8 +91,8 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 		config.NTP = shootExtensionConfig.NTP
 	}
 
-	if shootExtensionConfig.DisableDocker != nil {
-		config.DisableDocker = shootExtensionConfig.DisableDocker
+	if shootExtensionConfig.EnableDocker != nil {
+		config.EnableDocker = shootExtensionConfig.EnableDocker
 	}
 
 	return config, nil
@@ -241,7 +241,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 	// which prevents it from being loaded at boot.
 	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
 	//
-	if config.DisableDocker != nil && *config.DisableDocker {
+	if !ptr.Deref(config.EnableDocker, false) {
 		cfg.Storage.Links = append(cfg.Storage.Links,
 			igntypes.Link{
 				Node: igntypes.Node{
