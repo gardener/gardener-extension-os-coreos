@@ -252,6 +252,11 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 					Target: ptr.To("/dev/null"),
 				},
 			})
+	} else {
+		cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
+			Name:    "docker.service",
+			Enabled: ptr.To(true),
+		})
 	}
 
 	// Convert units from the OSC spec.

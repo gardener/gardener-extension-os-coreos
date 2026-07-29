@@ -317,6 +317,13 @@ var _ = Describe("Actuator", func() {
 
 				var ign ignitionTestConfig
 				Expect(stdjson.Unmarshal(userData, &ign)).To(Succeed())
+
+				unitNames := make([]string, 0, len(ign.Systemd.Units))
+				for _, u := range ign.Systemd.Units {
+					unitNames = append(unitNames, u.Name)
+				}
+				Expect(unitNames).To(ContainElements("docker.service"))
+
 				Expect(ign.Storage.Links).ToNot(ContainElement(SatisfyAll(
 					HaveField("Path", "/etc/extensions/docker-flatcar.raw"),
 					HaveField("Target", ptr.To("/dev/null")),
