@@ -17,6 +17,10 @@ const (
 type ExtensionConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
+	// DisableDocker specifies if docker should be removed from the nodes.
+	// Defaults to true, as everything is done by containerd.
+	// +optional
+	DisableDocker *bool `json:"disableDocker"`
 	// NTP to configure either systemd-timesyncd or ntpd
 	// +optional
 	NTP *NTPConfig `json:"ntp,omitempty"`

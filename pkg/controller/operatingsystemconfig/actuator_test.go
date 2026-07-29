@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package operatingsystemconfig_test
+package operatingsystemconfig
 
 import (
 	"bytes"
@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	configv1alpha1 "github.com/gardener/gardener-extension-os-coreos/pkg/controller/config/v1alpha1"
-	. "github.com/gardener/gardener-extension-os-coreos/pkg/controller/operatingsystemconfig"
 )
 
 // ignitionTestConfig mirrors the Ignition v3 JSON structure for test assertions only.
@@ -64,6 +63,82 @@ type ignitionTestConfig struct {
 
 var _ = Describe("Actuator", func() {
 	var (
+		scheme  = runtime.NewScheme()
+		encoder runtime.Encoder
+	)
+
+	BeforeEach(func() {
+		runtimeutils.Must(configv1alpha1.AddToScheme(scheme))
+		encoder = serializer.NewCodecFactory(scheme).EncoderForVersion(&json.Serializer{}, configv1alpha1.SchemeGroupVersion)
+
+	})
+
+	DescribeTable("GetAndMergeProviderConfiguration", func(extensionConfig, shootConfig, expectedConfig configv1alpha1.ExtensionConfig) {
+		providerConfigBuffer := new(bytes.Buffer)
+		Expect(encoder.Encode(&shootConfig, providerConfigBuffer)).To(Succeed())
+		osc := &extensionsv1alpha1.OperatingSystemConfig{
+			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					ProviderConfig: &runtime.RawExtension{Raw: providerConfigBuffer.Bytes()},
+				},
+			},
+		}
+		a := &actuator{
+			extensionConfig: Config{&extensionConfig},
+		}
+		config, err := a.GetAndMergeProviderConfiguration(osc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(config).ToNot(BeNil())
+		configv1alpha1.SetObjectDefaults_ExtensionConfig(&expectedConfig)
+		Expect(*config).To(Equal(expectedConfig))
+	},
+		Entry("no shoot config",
+			configv1alpha1.ExtensionConfig{
+				DisableDocker: new(true),
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.SystemdTimesyncd,
+				},
+			},
+			configv1alpha1.ExtensionConfig{},
+			configv1alpha1.ExtensionConfig{
+				DisableDocker: new(true),
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.SystemdTimesyncd,
+				},
+			}),
+		Entry("overwrite DisableDocker",
+			configv1alpha1.ExtensionConfig{
+				DisableDocker: new(true),
+			},
+			configv1alpha1.ExtensionConfig{
+				DisableDocker: new(false),
+			},
+			configv1alpha1.ExtensionConfig{
+				DisableDocker: new(false),
+			}),
+		Entry("overwrite ntp",
+			configv1alpha1.ExtensionConfig{
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.SystemdTimesyncd,
+				}},
+			configv1alpha1.ExtensionConfig{
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.NTPD,
+				}},
+			configv1alpha1.ExtensionConfig{
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.NTPD,
+				}}),
+	)
+})
+
+var _ = Describe("Actuator", func() {
+	var (
 		ctx        = context.TODO()
 		log        = logr.Discard()
 		fakeClient client.Client
@@ -83,6 +158,7 @@ var _ = Describe("Actuator", func() {
 		mgr = test.FakeManager{Client: fakeClient}
 		extensionConfig := Config{
 			ExtensionConfig: &configv1alpha1.ExtensionConfig{
+				DisableDocker: new(true),
 				NTP: &configv1alpha1.NTPConfig{
 					Enabled: ptr.To(true),
 					Daemon:  configv1alpha1.SystemdTimesyncd,
@@ -223,6 +299,30 @@ var _ = Describe("Actuator", func() {
 						Expect(*u.Contents).To(ContainSubstring("[Unit]"))
 					}
 				}
+			})
+
+			It("should override global defaults on a shoot by shoot basis and not disable docker", func() {
+				// Shoot specific override via providerConfig
+				providerConfigData := configv1alpha1.ExtensionConfig{
+					DisableDocker: new(false),
+				}
+				providerConfigBuffer := new(bytes.Buffer)
+				err := encoder.Encode(&providerConfigData, providerConfigBuffer)
+				osc.Spec.ProviderConfig = &runtime.RawExtension{Raw: providerConfigBuffer.Bytes()}
+				defer DeferCleanup(func() {
+					osc.Spec.ProviderConfig = nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+				userData, _, _, _, err := actuator.Reconcile(ctx, log, osc)
+				Expect(err).NotTo(HaveOccurred())
+
+				var ign ignitionTestConfig
+				Expect(stdjson.Unmarshal(userData, &ign)).To(Succeed())
+				Expect(ign.Storage.Links).ToNot(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/extensions/docker-flatcar.raw"),
+					HaveField("Target", ptr.To("/dev/null")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link removing the docker sysext image")
 			})
 		})
 	})

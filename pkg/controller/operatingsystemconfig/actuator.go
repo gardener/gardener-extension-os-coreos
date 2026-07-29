@@ -91,6 +91,10 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 		config.NTP = shootExtensionConfig.NTP
 	}
 
+	if shootExtensionConfig.DisableDocker != nil {
+		config.DisableDocker = shootExtensionConfig.DisableDocker
+	}
+
 	return config, nil
 }
 
@@ -111,7 +115,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 
 	switch purpose := osc.Spec.Purpose; purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		userData, err := a.handleProvisionOSC(ctx, osc)
+		userData, err := a.handleProvisionOSC(ctx, config, osc)
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
@@ -145,7 +149,7 @@ var containerdTemplateContent string
 //go:embed templates/containerd-setup.service
 var containerdSetupUnitContent string
 
-func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
+func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha1.ExtensionConfig, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
 	cfg := igntypes.Config{
 		Ignition: igntypes.Ignition{
 			Version: igntypes.MaxVersion.String(),
@@ -237,16 +241,18 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	// which prevents it from being loaded at boot.
 	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
 	//
-	cfg.Storage.Links = append(cfg.Storage.Links,
-		igntypes.Link{
-			Node: igntypes.Node{
-				Path:      "/etc/extensions/docker-flatcar.raw",
-				Overwrite: ptr.To(true),
-			},
-			LinkEmbedded1: igntypes.LinkEmbedded1{
-				Target: ptr.To("/dev/null"),
-			},
-		})
+	if config.DisableDocker != nil && *config.DisableDocker {
+		cfg.Storage.Links = append(cfg.Storage.Links,
+			igntypes.Link{
+				Node: igntypes.Node{
+					Path:      "/etc/extensions/docker-flatcar.raw",
+					Overwrite: ptr.To(true),
+				},
+				LinkEmbedded1: igntypes.LinkEmbedded1{
+					Target: ptr.To("/dev/null"),
+				},
+			})
+	}
 
 	// Convert units from the OSC spec.
 	for _, unit := range osc.Spec.Units {

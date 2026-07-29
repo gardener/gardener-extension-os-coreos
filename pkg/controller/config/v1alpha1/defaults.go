@@ -13,6 +13,9 @@ func SetDefaults_ExtensionConfig(obj *ExtensionConfig) {
 	if obj.NTP == nil {
 		obj.NTP = &NTPConfig{}
 	}
+	if obj.DisableDocker == nil {
+		obj.DisableDocker = new(true)
+	}
 }
 
 func SetDefaults_NTPConfig(obj *NTPConfig) {

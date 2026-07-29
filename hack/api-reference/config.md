@@ -43,6 +43,18 @@ ExtensionConfig is the configuration for the os-coreos extension.
 
 <tr>
 <td>
+<code>disableDocker</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableDocker specifies if docker should be removed from the nodes.<br />Defaults to true, as everything is done by containerd.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ntp</code></br>
 <em>
 <a href="#ntpconfig">NTPConfig</a>
