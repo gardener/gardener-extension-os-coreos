@@ -43,6 +43,18 @@ ExtensionConfig is the configuration for the os-coreos extension.
 
 <tr>
 <td>
+<code>enableDocker</code></br>
+<em>
+boolean
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableDocker specifies if docker should be available on the nodes.<br />Defaults to false, as docker is only need for special use-cases.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>ntp</code></br>
 <em>
 <a href="#ntpconfig">NTPConfig</a>

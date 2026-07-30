@@ -17,6 +17,10 @@ const (
 type ExtensionConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
+	// EnableDocker specifies if docker should be available on the nodes.
+	// Defaults to false, as docker is only need for special use-cases.
+	// +optional
+	EnableDocker *bool `json:"enableDocker,omitempty"`
 	// NTP to configure either systemd-timesyncd or ntpd
 	// +optional
 	NTP *NTPConfig `json:"ntp,omitempty"`

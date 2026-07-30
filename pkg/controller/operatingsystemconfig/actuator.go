@@ -91,6 +91,10 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 		config.NTP = shootExtensionConfig.NTP
 	}
 
+	if shootExtensionConfig.EnableDocker != nil {
+		config.EnableDocker = shootExtensionConfig.EnableDocker
+	}
+
 	return config, nil
 }
 
@@ -111,7 +115,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 
 	switch purpose := osc.Spec.Purpose; purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		userData, err := a.handleProvisionOSC(ctx, osc)
+		userData, err := a.handleProvisionOSC(ctx, config, osc)
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
@@ -145,7 +149,7 @@ var containerdTemplateContent string
 //go:embed templates/containerd-setup.service
 var containerdSetupUnitContent string
 
-func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
+func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha1.ExtensionConfig, osc *extensionsv1alpha1.OperatingSystemConfig) (string, error) {
 	cfg := igntypes.Config{
 		Ignition: igntypes.Ignition{
 			Version: igntypes.MaxVersion.String(),
@@ -237,16 +241,35 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, osc *extensionsv1alph
 	// which prevents it from being loaded at boot.
 	// See https://www.flatcar.org/docs/latest/provisioning/sysext/#remove-docker-and--or-containerd-from-flatcar
 	//
-	cfg.Storage.Links = append(cfg.Storage.Links,
-		igntypes.Link{
+	if !ptr.Deref(config.EnableDocker, false) {
+		cfg.Storage.Links = append(cfg.Storage.Links,
+			igntypes.Link{
+				Node: igntypes.Node{
+					Path:      "/etc/extensions/docker-flatcar.raw",
+					Overwrite: ptr.To(true),
+				},
+				LinkEmbedded1: igntypes.LinkEmbedded1{
+					Target: ptr.To("/dev/null"),
+				},
+			})
+	} else {
+		// To be able to run containers with restart policy always we need to create also a link.
+		// See https://www.flatcar.org/docs/latest/orchestrate/containers/getting-started-with-docker/#permanently-running-a-container
+		cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
+			Name:    "docker.service",
+			Enabled: ptr.To(true),
+		})
+		cfg.Storage.Links = append(cfg.Storage.Links, igntypes.Link{
 			Node: igntypes.Node{
-				Path:      "/etc/extensions/docker-flatcar.raw",
+				Path:      "/etc/systemd/system/multi-user.target.wants/docker.service",
 				Overwrite: ptr.To(true),
 			},
 			LinkEmbedded1: igntypes.LinkEmbedded1{
-				Target: ptr.To("/dev/null"),
+				Target: ptr.To("/usr/lib/systemd/system/docker.service"),
+				Hard:   ptr.To(false),
 			},
 		})
+	}
 
 	// Convert units from the OSC spec.
 	for _, unit := range osc.Spec.Units {

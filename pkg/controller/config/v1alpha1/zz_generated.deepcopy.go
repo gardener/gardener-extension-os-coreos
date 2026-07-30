@@ -17,6 +17,11 @@ import (
 func (in *ExtensionConfig) DeepCopyInto(out *ExtensionConfig) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	if in.EnableDocker != nil {
+		in, out := &in.EnableDocker, &out.EnableDocker
+		*out = new(bool)
+		**out = **in
+	}
 	if in.NTP != nil {
 		in, out := &in.NTP, &out.NTP
 		*out = new(NTPConfig)
