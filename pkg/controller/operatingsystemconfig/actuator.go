@@ -253,9 +253,21 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 				},
 			})
 	} else {
+		// To be able to run containers with restart policy always we need to create also a link.
+		// See https://www.flatcar.org/docs/latest/orchestrate/containers/getting-started-with-docker/#permanently-running-a-container
 		cfg.Systemd.Units = append(cfg.Systemd.Units, igntypes.Unit{
 			Name:    "docker.service",
 			Enabled: ptr.To(true),
+		})
+		cfg.Storage.Links = append(cfg.Storage.Links, igntypes.Link{
+			Node: igntypes.Node{
+				Path:      "/etc/systemd/system/multi-user.target.wants/docker.service",
+				Overwrite: ptr.To(true),
+			},
+			LinkEmbedded1: igntypes.LinkEmbedded1{
+				Target: ptr.To("/usr/lib/systemd/system/docker.service"),
+				Hard:   ptr.To(false),
+			},
 		})
 	}
 

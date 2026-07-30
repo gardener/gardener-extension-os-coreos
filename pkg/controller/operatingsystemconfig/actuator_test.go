@@ -318,11 +318,16 @@ var _ = Describe("Actuator", func() {
 				var ign ignitionTestConfig
 				Expect(stdjson.Unmarshal(userData, &ign)).To(Succeed())
 
-				unitNames := make([]string, 0, len(ign.Systemd.Units))
-				for _, u := range ign.Systemd.Units {
-					unitNames = append(unitNames, u.Name)
-				}
-				Expect(unitNames).To(ContainElements("docker.service"))
+				Expect(ign.Systemd.Units).To(ContainElement(SatisfyAll(
+					HaveField("Name", "docker.service"),
+					HaveField("Enabled", ptr.To(true)),
+				)), "check if docker.service is enabled in units")
+
+				Expect(ign.Storage.Links).To(ContainElement(SatisfyAll(
+					HaveField("Path", "/etc/systemd/system/multi-user.target.wants/docker.service"),
+					HaveField("Target", ptr.To("/usr/lib/systemd/system/docker.service")),
+					HaveField("Overwrite", ptr.To(true)),
+				)), "expected a link to enable the docker.service")
 
 				Expect(ign.Storage.Links).ToNot(ContainElement(SatisfyAll(
 					HaveField("Path", "/etc/extensions/docker-flatcar.raw"),
