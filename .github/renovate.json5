@@ -40,5 +40,16 @@
       matchManagers: ['helm-values', 'helmv3', 'helmfile', 'helm-requirements'],
       enabled: false,
     },
+    // Disable ignored packages from dependabot ignore list
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        'k8s.io/**',
+        'sigs.k8s.io/**',
+        'github.com/gardener/etcd-druid/**',
+        'github.com/prometheus-operator/**',
+      ],
+      enabled: false,
+    }
   ],
 }
