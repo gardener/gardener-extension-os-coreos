@@ -1,0 +1,44 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended', // https://docs.renovatebot.com/presets-config/#configrecommended
+    'github>gardener/ci-infra//config/renovate/automerge-with-tide.json5',
+  ],
+  labels: [
+    'area/compliance',
+    'kind/enhancement',
+  ],
+  postUpdateOptions: [
+    'gomodTidy',
+  ],
+  prFooter: '**Release note**:\n```other dependency\nNONE\n```',
+  rebaseWhen: 'conflicted',
+  dependencyDashboard: true,
+  packageRules: [
+    // github-actions: auto-merge all updates
+    {
+      matchManagers: ['github-actions'],
+      automerge: true,
+    },
+    // gomod: gardener dependencies — manual only
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: [
+        'github.com/gardener/gardener',
+        'github.com/gardener/gardener/**',
+      ],
+      groupName: 'gardener-dependencies',
+    },
+    // Disable Go toolchain updates in go.mod — managed via Dockerfile instead
+    {
+      matchManagers: ['gomod'],
+      matchPackageNames: ['go'],
+      enabled: false,
+    },
+    // Disable Helm updates
+    {
+      matchManagers: ['helm-values', 'helmv3', 'helmfile', 'helm-requirements'],
+      enabled: false,
+    },
+  ],
+}
