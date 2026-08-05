@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	stdjson "encoding/json"
 	"path/filepath"
 
@@ -530,3 +531,68 @@ fi
 		})
 	})
 })
+
+var _ = DescribeTable("#networkdFiles", func(conf *configv1alpha1.NetworkdConfig, expectedFile string) {
+	files, err := networkdFiles(conf)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(files).To(HaveLen(1))
+	Expect(files[0].Content.Inline).NotTo(BeNil())
+	networkFile, err := base64.StdEncoding.DecodeString(files[0].Content.Inline.Data)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(string(networkFile)).To(BeComparableTo(expectedFile))
+},
+	Entry("ipv4 without routes and gateway",
+		&configv1alpha1.NetworkdConfig{
+			Interfaces: []configv1alpha1.InterfaceConfig{
+				{
+					Name: "eth0",
+					DHCP: &configv1alpha1.DHCPConfig{
+						IPv4: &configv1alpha1.DHCPIPv4Config{
+							UseGateway: new(false),
+							UseRoutes:  new(false),
+						},
+					},
+				},
+			},
+		},
+		`[Match]
+Name=eth0
+
+[Network]
+DHCP=yes
+[DHCPv4]
+UseGateway=false
+UseRoutes=false
+# default from flatcars zz-default.network
+RoutesToDNS=false
+
+# defaults from flatcars zz-default.network
+[DHCP]
+UseMTU=true
+UseDomains=true
+`,
+	),
+	Entry("should not add DHCPv4 default config for ipv6 dhcp client",
+		&configv1alpha1.NetworkdConfig{
+			Interfaces: []configv1alpha1.InterfaceConfig{
+				{
+					Name: "eth0",
+					DHCP: &configv1alpha1.DHCPConfig{
+						Enabled: new(configv1alpha1.DHCPEnabledIPv6),
+					},
+				},
+			},
+		},
+		`[Match]
+Name=eth0
+
+[Network]
+DHCP=ipv6
+
+# defaults from flatcars zz-default.network
+[DHCP]
+UseMTU=true
+UseDomains=true
+`,
+	),
+)

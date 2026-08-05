@@ -5,13 +5,17 @@
 package operatingsystemconfig
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -19,6 +23,7 @@ import (
 	ignv3_3 "github.com/coreos/ignition/v2/config/v3_3"
 	igntypes "github.com/coreos/ignition/v2/config/v3_3/types"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +43,9 @@ var cgroupsv2TemplateContent string
 //go:embed templates/ntp-config.conf.tpl
 var ntpConfigTemplateContent string
 
+//go:embed templates/99-gardener.network.tpl
+var networkdConfigTemplateContent string
+
 //go:embed templates/11-exec_config.conf
 var customContainerdServiceOverride string
 
@@ -48,6 +56,31 @@ Restart=no
 `
 
 var ntpConfigTemplate *template.Template
+
+type networkdConfigTemplateValues struct {
+	Name   string
+	DHCP   string
+	DHCPV4 *networkdConfigTemplateValuesDHCPv4
+	DHCPV6 *networkdConfigTemplateValuesDHCPv6
+}
+
+type networkdConfigTemplateValuesDHCPv4 struct {
+	UseGateway bool
+	UseRoutes  bool
+}
+
+type networkdConfigTemplateValuesDHCPv6 struct{}
+
+var defaultNetworkdConfigTemplateValues = networkdConfigTemplateValues{
+	DHCP: "yes",
+	DHCPV4: &networkdConfigTemplateValuesDHCPv4{
+		UseGateway: true,
+		UseRoutes:  true,
+	},
+}
+
+var networkdConfigTemplate *template.Template
+
 var decoder runtime.Decoder
 
 type actuator struct {
@@ -78,6 +111,11 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("failed to parse NTP config template: %w", err))
 	}
+
+	networkdConfigTemplate, err = template.New("networkd-config").Funcs(sprig.TxtFuncMap()).Parse(networkdConfigTemplateContent)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse networkd config template: %w", err))
+	}
 }
 
 func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
@@ -93,6 +131,21 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 
 	if shootExtensionConfig.EnableDocker != nil {
 		config.EnableDocker = shootExtensionConfig.EnableDocker
+	}
+
+	if shootExtensionConfig.Networkd != nil {
+		if config.Networkd == nil {
+			config.Networkd = &configv1alpha1.NetworkdConfig{}
+		}
+		interfaceMap := map[string]configv1alpha1.InterfaceConfig{}
+		for _, iface := range config.Networkd.Interfaces {
+			interfaceMap[iface.Name] = iface
+		}
+		for _, iface := range shootExtensionConfig.Networkd.Interfaces {
+			interfaceMap[iface.Name] = iface
+		}
+
+		config.Networkd.Interfaces = slices.Collect(maps.Values(interfaceMap))
 	}
 
 	return config, nil
@@ -161,8 +214,9 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 	// before containerd starts.
 	cfg.Storage.Files = append(cfg.Storage.Files, newIgnitionFile(
 		"/opt/bin/containerd-setup.sh",
-		containerdTemplateContent,
+		[]byte(containerdTemplateContent),
 		ptr.To(0o755),
+		false,
 	))
 
 	// Convert files from the OSC spec.
@@ -294,6 +348,25 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 		cfg.Systemd.Units = append(cfg.Systemd.Units, ignUnit)
 	}
 
+	if config.Networkd != nil {
+		files, err := networkdFiles(config.Networkd)
+		if err != nil {
+			return "", fmt.Errorf("creating networkd files: %w", err)
+		}
+		var errs error
+		for _, f := range files {
+			ignFile, err := newIgnitionFileFromExtensionFile(&f)
+			if err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+			cfg.Storage.Files = append(cfg.Storage.Files, ignFile)
+		}
+		if errs != nil {
+			return "", fmt.Errorf("creating networkd ignition files: %w", err)
+		}
+	}
+
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal ignition config: %w", err)
@@ -307,15 +380,77 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 	return string(data), nil
 }
 
+func networkdFiles(networkConfig *configv1alpha1.NetworkdConfig) ([]extensionsv1alpha1.File, error) {
+	var files []extensionsv1alpha1.File
+
+	for i, ifaceConfig := range networkConfig.Interfaces {
+		values := defaultNetworkdConfigTemplateValues
+		values.Name = ifaceConfig.Name
+		if dhcp := ifaceConfig.DHCP; dhcp != nil {
+			if dhcp.Enabled != nil {
+				values.DHCP = string(*dhcp.Enabled)
+				if *dhcp.Enabled == configv1alpha1.DHCPEnabledIPv6 {
+					values.DHCPV4 = nil
+				}
+			}
+
+			if ipv4 := ifaceConfig.DHCP.IPv4; ipv4 != nil {
+				if ipv4.UseRoutes != nil {
+					values.DHCPV4.UseRoutes = *ipv4.UseRoutes
+				}
+				if ipv4.UseGateway != nil {
+					values.DHCPV4.UseGateway = *ipv4.UseGateway
+				}
+			}
+		}
+		buf := new(bytes.Buffer)
+		if err := networkdConfigTemplate.Execute(buf, values); err != nil {
+			return nil, fmt.Errorf("failed to execute networkd template: %w", err)
+		}
+
+		files = extensionswebhook.EnsureFileWithPath(files, extensionsv1alpha1.File{
+			Path:        networkdConfigFilePath(i),
+			Permissions: new(uint32(0o644)),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Encoding: string(extensionsv1alpha1.B64FileCodecID),
+					Data:     base64.StdEncoding.EncodeToString(buf.Bytes()),
+				},
+			},
+		})
+	}
+	return files, nil
+}
+
+func networkdConfigFilePath(index int) string {
+	return fmt.Sprintf("/etc/systemd/network/99-gardener-%d.network", index)
+}
+
+func newIgnitionFileFromExtensionFile(f *extensionsv1alpha1.File) (igntypes.File, error) {
+	if f.Content.Inline == nil {
+		return igntypes.File{}, errors.New("file content must be inline")
+	}
+	var perm *int
+	if f.Permissions != nil {
+		perm = new(int(*f.Permissions))
+	}
+
+	return newIgnitionFile(f.Path, []byte(f.Content.Inline.Data), perm, f.Content.Inline.Encoding == string(extensionsv1alpha1.B64FileCodecID)), nil
+}
+
 // newIgnitionFile creates an igntypes.File with the given content encoded as a base64 data URI.
-func newIgnitionFile(path, content string, mode *int) igntypes.File {
+func newIgnitionFile(path string, content []byte, mode *int, isContentEncoded bool) igntypes.File {
+	fileContent := string(content)
+	if !isContentEncoded {
+		fileContent = base64.StdEncoding.EncodeToString(content)
+	}
 	return igntypes.File{
 		Node: igntypes.Node{
 			Path: path,
 		},
 		FileEmbedded1: igntypes.FileEmbedded1{
 			Contents: igntypes.Resource{
-				Source: ptr.To("data:;base64," + base64.StdEncoding.EncodeToString([]byte(content))),
+				Source: ptr.To("data:;base64," + fileContent),
 			},
 			Mode: mode,
 		},
@@ -435,6 +570,24 @@ ExecStartPre=` + filePathKubeletCGroupDriverScript + `
 			},
 		},
 	})
+
+	if config.Networkd != nil {
+		var networkfilePaths []string
+		files, err := networkdFiles(config.Networkd)
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating networkd files: %w", err)
+		}
+		// ensure gardener node agent restarts networkd service to apply new network config
+		for _, f := range files {
+			extensionFiles = extensionswebhook.EnsureFileWithPath(extensionFiles, f)
+			networkfilePaths = append(networkfilePaths, f.Path)
+		}
+		extensionUnits = append(extensionUnits, extensionsv1alpha1.Unit{
+			Name:      "systemd-networkd.service",
+			Command:   new(extensionsv1alpha1.CommandRestart),
+			FilePaths: networkfilePaths,
+		})
+	}
 
 	return extensionUnits, extensionFiles, nil
 }

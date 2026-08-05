@@ -24,6 +24,10 @@ type ExtensionConfig struct {
 	// NTP to configure either systemd-timesyncd or ntpd
 	// +optional
 	NTP *NTPConfig `json:"ntp,omitempty"`
+
+	// Networkd to configure systemd-networkd via .network files
+	// +optional
+	Networkd *NetworkdConfig `json:"networkd,omitempty"`
 }
 
 // NTPConfig General NTP Config for either systemd-timesyncd or ntpd
@@ -43,4 +47,49 @@ type NTPDConfig struct {
 	Servers []string `json:"servers"`
 	// Interfaces for ntpd to bind to. Can be more than one.
 	Interfaces []string `json:"interfaces,omitempty"`
+}
+
+type NetworkdConfig struct {
+	// Interfaces holds network configuration based for interfaces
+	Interfaces []InterfaceConfig `json:"interfaces,omitempty"`
+}
+
+type InterfaceConfig struct {
+	// Name is the name of the interface to configure. Supports glob patterns.
+	// See https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html#Name= for more information.
+	Name string `json:"name"`
+
+	// DHCP contains DHCP configuration for the interface
+	DHCP *DHCPConfig `json:"dhcp,omitempty"`
+}
+
+type DHCPEnabled string
+
+const (
+	DHCPEnabledYes  DHCPEnabled = "yes"
+	DHCPEnabledNo   DHCPEnabled = "no"
+	DHCPEnabledIPv4 DHCPEnabled = "ipv4"
+	DHCPEnabledIPv6 DHCPEnabled = "ipv6"
+)
+
+type DHCPConfig struct {
+	// Enabled defines whether to enable DHCP
+	// See https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html#DHCP=
+	Enabled *DHCPEnabled `json:"enabled,omitempty"`
+	// IPv4 contains IPv4 DHCP options
+	IPv4 *DHCPIPv4Config `json:"ipv4,omitempty"`
+	// IPv4 contains IPv6 DHCP options
+	IPv6 *DHCPIPv6Config `json:"ipv6,omitempty"`
+}
+
+type DHCPIPv4Config struct {
+	// UseGateway when set to true, and the DHCP server provides a Router option, the default gateway based on the router address will be configured
+	// See https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html#UseGateway= for more information.
+	UseGateway *bool `json:"useGateway"`
+	// UseRoutes defines whether static routes from DHCP will be added to the routing table
+	// See https://www.freedesktop.org/software/systemd/man/latest/systemd.network.html#UseRoutes= for more information.
+	UseRoutes *bool `json:"useRoutes"`
+}
+
+type DHCPIPv6Config struct {
 }
