@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/coreos/ignition/v2 v2.26.0
-	github.com/gardener/gardener v1.145.0
-	github.com/gardener/gardener/pkg/apis v1.145.0
+	github.com/gardener/gardener v1.148.2
+	github.com/gardener/gardener/pkg/apis v1.148.2
 	github.com/go-logr/logr v1.4.4
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
