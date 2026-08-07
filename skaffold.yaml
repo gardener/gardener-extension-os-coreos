@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/GoogleContainerTools/skaffold/main/docs-v2/content/en/schemas/v4beta7.json
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: gardener-extension-os-coreos
+build:
+  insecureRegistries:
+    - registry.local.gardener.cloud:5001
+  artifacts:
+    - image: local-skaffold/gardener-extension-os-coreos
+      docker: {}
+    - image: local-skaffold/gardener-extension-os-coreos/chart
+      custom:
+        buildCommand: |
+          bash ${GARDENER_HACK_DIR}/push-helm.sh ./charts/gardener-extension-os-coreos .image.ref
+      requires:
+        - image: local-skaffold/gardener-extension-os-coreos
+          alias: IMG
+manifests:
+  kustomize:
+    paths:
+      - dev/extension
+    buildArgs:
+      # kustomization consumes from example directory using ../
+      - --load-restrictor=LoadRestrictionsNone
+deploy:
+  kubectl:
+    flags:
+      apply: [--force-conflicts, --server-side]
+resourceSelector:
+  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  allow:
+    - groupKind: Extension.operator.gardener.cloud
+      image:
+        - .spec.deployment.extension.helm.ociRepository.ref
