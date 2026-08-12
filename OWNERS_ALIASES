@@ -9,6 +9,7 @@ aliases:
   - rfranzke
   - Roncossek
   - Vincinator
+  - MartinWeindel
   - robinschneider
   - xoxys
   gardener-extension-os-coreos-approvers:
@@ -19,5 +20,6 @@ aliases:
   - rfranzke
   - Roncossek
   - Vincinator
+  - MartinWeindel
   - robinschneider
   - xoxys
