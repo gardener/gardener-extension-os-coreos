@@ -138,5 +138,5 @@ extension-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) $(SKAFFOLD) run
 
 .PHONY: extension-down
-extension-down:
+extension-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete

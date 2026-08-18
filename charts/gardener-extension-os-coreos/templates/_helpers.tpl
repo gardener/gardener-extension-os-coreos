@@ -1,7 +1,7 @@
 {{/* vim: set filetype=mustache: */}}
 {{-  define "image" -}}
   {{- if .Values.image.ref }}
-  {{- printf "%s" .Values.image.ref }}
+  {{- .Values.image.ref }}
   {{- else if hasPrefix "sha256:" .Values.image.tag }}
   {{- printf "%s@%s" .Values.image.repository .Values.image.tag }}
   {{- else }}
