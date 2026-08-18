@@ -214,7 +214,7 @@ func (a *actuator) handleProvisionOSC(ctx context.Context, config *configv1alpha
 	// before containerd starts.
 	cfg.Storage.Files = append(cfg.Storage.Files, newIgnitionFile(
 		"/opt/bin/containerd-setup.sh",
-		[]byte(containerdTemplateContent),
+		containerdTemplateContent,
 		ptr.To(0o755),
 		false,
 	))
@@ -435,14 +435,16 @@ func newIgnitionFileFromExtensionFile(f *extensionsv1alpha1.File) (igntypes.File
 		perm = new(int(*f.Permissions))
 	}
 
-	return newIgnitionFile(f.Path, []byte(f.Content.Inline.Data), perm, f.Content.Inline.Encoding == string(extensionsv1alpha1.B64FileCodecID)), nil
+	return newIgnitionFile(f.Path, f.Content.Inline.Data, perm, f.Content.Inline.Encoding == string(extensionsv1alpha1.B64FileCodecID)), nil
 }
 
 // newIgnitionFile creates an igntypes.File with the given content encoded as a base64 data URI.
-func newIgnitionFile(path string, content []byte, mode *int, isContentEncoded bool) igntypes.File {
-	fileContent := string(content)
-	if !isContentEncoded {
-		fileContent = base64.StdEncoding.EncodeToString(content)
+func newIgnitionFile(path string, content string, mode *int, isContentEncoded bool) igntypes.File {
+	var fileContent string
+	if isContentEncoded {
+		fileContent = content
+	} else {
+		fileContent = base64.StdEncoding.EncodeToString([]byte(content))
 	}
 	return igntypes.File{
 		Node: igntypes.Node{
