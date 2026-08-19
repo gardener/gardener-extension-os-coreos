@@ -85,7 +85,7 @@ func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.Oper
 	shootExtensionConfig := &configv1alpha1.ExtensionConfig{}
 	err := yaml.Unmarshal(osc.Spec.ProviderConfig.Raw, shootExtensionConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
 	}
 
 	config := a.extensionConfig.DeepCopy()
