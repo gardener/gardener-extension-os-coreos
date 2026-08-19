@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -82,8 +83,9 @@ func init() {
 
 func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
 	shootExtensionConfig := &configv1alpha1.ExtensionConfig{}
-	if _, _, err := decoder.Decode(osc.Spec.ProviderConfig.Raw, nil, shootExtensionConfig); err != nil {
-		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
+	err := yaml.Unmarshal(osc.Spec.ProviderConfig.Raw, shootExtensionConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	config := a.extensionConfig.DeepCopy()

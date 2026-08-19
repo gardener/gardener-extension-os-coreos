@@ -83,13 +83,13 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 		}
+		configv1alpha1.SetObjectDefaults_ExtensionConfig(&extensionConfig)
 		a := &actuator{
 			extensionConfig: Config{&extensionConfig},
 		}
 		config, err := a.GetAndMergeProviderConfiguration(osc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(config).ToNot(BeNil())
-		configv1alpha1.SetObjectDefaults_ExtensionConfig(&expectedConfig)
 		Expect(*config).To(Equal(expectedConfig))
 	},
 		Entry("no shoot config",
@@ -117,6 +117,25 @@ var _ = Describe("Actuator", func() {
 			},
 			configv1alpha1.ExtensionConfig{
 				EnableDocker: new(false),
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(true),
+					Daemon:  configv1alpha1.SystemdTimesyncd,
+				},
+			}),
+		Entry("can overwrite global defaulted field",
+			configv1alpha1.ExtensionConfig{
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(false),
+				}},
+			configv1alpha1.ExtensionConfig{
+				EnableDocker: new(false),
+			},
+			configv1alpha1.ExtensionConfig{
+				EnableDocker: new(false),
+				NTP: &configv1alpha1.NTPConfig{
+					Enabled: ptr.To(false),
+					Daemon:  configv1alpha1.SystemdTimesyncd,
+				},
 			}),
 		Entry("overwrite ntp",
 			configv1alpha1.ExtensionConfig{
@@ -389,7 +408,7 @@ var _ = Describe("Actuator", func() {
 				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "systemd-timesyncd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
 				Expect(extensionUnits).To(Not(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStop), Enable: ptr.To(false)})))
 			})
-			It("should not enable any timesync service when Daemon is None", func() {
+			It("should not enable any timesync service when ntp.Enabled is false", func() {
 				extensionConfig := Config{
 					ExtensionConfig: &configv1alpha1.ExtensionConfig{
 						NTP: &configv1alpha1.NTPConfig{
