@@ -83,6 +83,9 @@ func init() {
 
 func (a *actuator) GetAndMergeProviderConfiguration(osc *extensionsv1alpha1.OperatingSystemConfig) (*configv1alpha1.ExtensionConfig, error) {
 	shootExtensionConfig := &configv1alpha1.ExtensionConfig{}
+	// Use yaml.Unmarshal instead of runtime.Decode to bypass SetDefaults_* functions.
+	// This ensures unset fields remain nil in shootExtensionConfig, allowing explicit
+	// non-nil overrides (e.g. false) to take effect without default values polluting the merge.
 	err := yaml.Unmarshal(osc.Spec.ProviderConfig.Raw, shootExtensionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode provider config: %+v", err)
