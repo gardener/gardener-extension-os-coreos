@@ -4,6 +4,8 @@ kind: Config
 metadata:
   name: gardener-extension-os-coreos
 build:
+  local:
+    useBuildkit: true
   insecureRegistries:
     - registry.local.gardener.cloud:5001
   artifacts:
