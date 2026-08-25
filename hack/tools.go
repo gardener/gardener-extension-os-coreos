@@ -9,9 +9,5 @@
 package tools
 
 import (
-	_ "github.com/gardener/gardener/.github"
-	_ "github.com/gardener/gardener/.github/ISSUE_TEMPLATE"
-	_ "github.com/gardener/gardener/hack"
-
-	_ "golang.org/x/tools/cmd/goimports"
+	_ "github.com/gardener/gardener/hack/tools"
 )
