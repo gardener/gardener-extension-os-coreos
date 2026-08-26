@@ -1,0 +1,16 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: os-coreos
+spec:
+  deployment:
+    extension:
+      helm:
+        ociRepository:
+          ref: local-skaffold/gardener-extension-os-coreos/chart:v0.0.0
+      values:
+        image:
+          repository: null
+          tag: null
+          pullPolicy: Always
+

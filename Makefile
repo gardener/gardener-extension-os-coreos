@@ -46,6 +46,11 @@ install:
 	@LD_FLAGS="-w -X github.com/gardener/$(EXTENSION_PREFIX)-$(NAME)/pkg/version.Version=$(VERSION)" \
 	bash $(GARDENER_HACK_DIR)/install.sh ./...
 
+.PHONY: build
+build:
+	@LD_FLAGS="-w -X github.com/gardener/$(EXTENSION_PREFIX)-$(NAME)/pkg/version.Version=$(VERSION)" \
+	bash $(GARDENER_HACK_DIR)/build.sh -o gardener-extension-os-coreos ./cmd/gardener-extension-os-coreos/ 
+
 .PHONY: docker-login
 docker-login:
 	@gcloud auth activate-service-account --key-file .kube-secrets/gcr/gcr-readwrite.json
@@ -123,3 +128,16 @@ verify: check format sast test
 
 .PHONY: verify-extended
 verify-extended: check-generate check format sast-report test-cov test-clean
+
+
+.PHONY: extension-up
+extension-up: export EXTENSION_VERSION = $(VERSION)
+extension-up: export SKAFFOLD_DEFAULT_REPO = registry.local.gardener.cloud:5001
+extension-up: export SKAFFOLD_PUSH = true
+extension-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(REPO_ROOT)/hack/prepare-dev-extension.sh
+	GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) $(SKAFFOLD) run
+
+.PHONY: extension-down
+extension-down: $(SKAFFOLD) $(KUBECTL)
+	$(SKAFFOLD) delete

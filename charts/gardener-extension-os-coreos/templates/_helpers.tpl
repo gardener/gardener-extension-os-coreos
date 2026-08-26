@@ -1,6 +1,8 @@
 {{/* vim: set filetype=mustache: */}}
 {{-  define "image" -}}
-  {{- if hasPrefix "sha256:" .Values.image.tag }}
+  {{- if .Values.image.ref }}
+  {{- .Values.image.ref }}
+  {{- else if hasPrefix "sha256:" .Values.image.tag }}
   {{- printf "%s@%s" .Values.image.repository .Values.image.tag }}
   {{- else }}
   {{- printf "%s:%s" .Values.image.repository .Values.image.tag }}
@@ -11,7 +13,7 @@
 Expand the name of the chart.
 */}}
 {{- define "coreos.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- default "gardener-extension-os-coreos" .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -23,7 +25,7 @@ If release name contains chart name it will be used as a full name.
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default "gardener-extension-os-coreos" .Values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -36,7 +38,7 @@ If release name contains chart name it will be used as a full name.
 Create chart name and version as used by the chart label.
 */}}
 {{- define "coreos.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s" "gardener-extension-os-coreos" .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
