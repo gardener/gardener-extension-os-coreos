@@ -5,9 +5,9 @@ go 1.26.5
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/coreos/ignition/v2 v2.26.0
-	github.com/gardener/gardener v1.150.1
-	github.com/gardener/gardener/hack/tools v1.150.1
-	github.com/gardener/gardener/pkg/apis v1.150.1
+	github.com/gardener/gardener v1.150.2
+	github.com/gardener/gardener/hack/tools v1.150.2
+	github.com/gardener/gardener/pkg/apis v1.150.2
 	github.com/go-logr/logr v1.4.4
 	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.43.0
