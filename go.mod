@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/coreos/ignition/v2 v2.26.0
+	github.com/coreos/ignition/v2 v2.27.0
 	github.com/gardener/gardener v1.152.0
 	github.com/gardener/gardener/hack/tools v1.152.0
 	github.com/gardener/gardener/pkg/apis v1.152.0
@@ -127,8 +127,8 @@ require (
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mdlayher/socket v0.5.1 // indirect
-	github.com/mdlayher/vsock v1.2.1 // indirect
+	github.com/mdlayher/socket v0.6.0 // indirect
+	github.com/mdlayher/vsock v1.3.0 // indirect
 	github.com/miekg/dns v1.1.73 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
