@@ -411,7 +411,7 @@ func (a *actuator) handleReconcileOSC(config *configv1alpha1.ExtensionConfig, _ 
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filepath.Join("/", "etc", "modprobe.d", "sctp.conf"),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
-		Permissions: ptr.To[uint32](0644),
+		Permissions: ptr.To[int32](0644),
 	})
 
 	// add scripts and dropins for kubelet cgroup driver configuration
@@ -419,7 +419,7 @@ func (a *actuator) handleReconcileOSC(config *configv1alpha1.ExtensionConfig, _ 
 	extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 		Path:        filePathKubeletCGroupDriverScript,
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: cgroupsv2TemplateContent}},
-		Permissions: ptr.To[uint32](0755),
+		Permissions: ptr.To[int32](0755),
 	})
 	extensionUnits = append(extensionUnits, extensionsv1alpha1.Unit{
 		Name: "kubelet.service",
@@ -464,7 +464,7 @@ func (a *actuator) configureNTPDaemon(config *configv1alpha1.ExtensionConfig, ex
 		extensionFiles = append(extensionFiles, extensionsv1alpha1.File{
 			Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: templateData}},
-			Permissions: ptr.To[uint32](0644),
+			Permissions: ptr.To[int32](0644),
 		})
 	default:
 		return nil, nil, fmt.Errorf("unsupported NTP daemon: %s", config.NTP.Daemon)
