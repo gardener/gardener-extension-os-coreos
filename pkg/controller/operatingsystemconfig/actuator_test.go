@@ -445,7 +445,7 @@ var _ = Describe("Actuator", func() {
 				Expect(extensionUnits).To(ContainElement(extensionsv1alpha1.Unit{Name: "ntpd.service", Command: ptr.To(extensionsv1alpha1.CommandStart), Enable: ptr.To(true), FilePaths: []string{filepath.Join(string(filepath.Separator), "etc", "ntp.conf")}}))
 				Expect(extensionFiles).To(ContainElement(extensionsv1alpha1.File{
 					Path:        filepath.Join(string(filepath.Separator), "etc", "ntp.conf"),
-					Permissions: ptr.To[uint32](0644),
+					Permissions: ptr.To[int32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: `
@@ -525,12 +525,12 @@ ExecStart=/usr/bin/containerd --config /etc/containerd/config.toml`,
 				Expect(extensionFiles).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/modprobe.d/sctp.conf",
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[int32](0644),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: "install sctp /bin/true"}},
 					},
 					extensionsv1alpha1.File{
 						Path:        "/opt/bin/kubelet_cgroup_driver.sh",
-						Permissions: ptr.To[uint32](0755),
+						Permissions: ptr.To[int32](0755),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `#!/bin/bash
 
 KUBELET_CONFIG=/var/lib/kubelet/config/kubelet
