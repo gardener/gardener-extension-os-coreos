@@ -45,22 +45,6 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  resourceNames:
-  - os-coreos-leader-election
-  verbs:
-  - get
-  - watch
-  - update
-- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
